@@ -7,12 +7,14 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 
 public class TileEngine {
 
-    public static final int TILE_SIZE = 16;
-    public static final int SHEET_TILE_SIZE = 16;
-    public static final int SHEET_MARGIN = 1;
+    public static final int TILE_SIZE = 16;       // world tile size
+    public static final int PADDED_TILE_SIZE = 18; // 16 + 2 padding
+    public static final int CORE_TILE_SIZE = 16;   // actual tile inside padding
 
     private final int width;
     private final int height;
@@ -33,10 +35,11 @@ public class TileEngine {
         this.height = height;
         this.tiles = new int[height][width];
 
-        // Load tilesheet
+        // Load padded tilesheet
         tilesheet = new Texture("tiles/tilesheet.png");
+        tilesheet.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
-        // Slice it
+        // Slice padded tilesheet
         regions = splitTilesheet(tilesheet);
 
         // Camera setup
@@ -53,10 +56,21 @@ public class TileEngine {
             public boolean scrolled(float amountX, float amountY) {
                 if (Math.abs(amountY) < 0.01f) return false;
 
-                camera.zoom += amountY * 0.05f;
-                if (camera.zoom < 0.1f) camera.zoom = 0.1f;
-                if (camera.zoom > 1f) camera.zoom = 1f;
+                // 1. World position under mouse BEFORE zoom
+                Vector3 before = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
 
+                // 2. Apply zoom
+                camera.zoom += amountY * 0.05f;
+                camera.zoom = Math.max(0.1f, Math.min(camera.zoom, 1f));
+                camera.update();
+
+                // 3. World position under mouse AFTER zoom
+                Vector3 after = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
+
+                // 4. Shift camera so the mouse stays over the same world point
+                camera.position.add(before.x - after.x, before.y - after.y, 0);
+
+                clampCamera();
                 return true;
             }
 
@@ -95,17 +109,20 @@ public class TileEngine {
     }
 
     private TextureRegion[][] splitTilesheet(Texture sheet) {
-        int rows = (sheet.getHeight() + TileEngine.SHEET_MARGIN) / (TileEngine.SHEET_TILE_SIZE + TileEngine.SHEET_MARGIN);
-        int cols = (sheet.getWidth() + TileEngine.SHEET_MARGIN) / (TileEngine.SHEET_TILE_SIZE + TileEngine.SHEET_MARGIN);
+        int rows = sheet.getHeight() / PADDED_TILE_SIZE;
+        int cols = sheet.getWidth() / PADDED_TILE_SIZE;
 
         TextureRegion[][] out = new TextureRegion[rows][cols];
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
-                int px = x * (TileEngine.SHEET_TILE_SIZE + TileEngine.SHEET_MARGIN);
-                int py = y * (TileEngine.SHEET_TILE_SIZE + TileEngine.SHEET_MARGIN);
 
-                out[y][x] = new TextureRegion(sheet, px, py, TileEngine.SHEET_TILE_SIZE, TileEngine.SHEET_TILE_SIZE);
+                // Position of padded tile
+                int px = x * PADDED_TILE_SIZE;
+                int py = y * PADDED_TILE_SIZE;
+
+                // Extract ONLY the inner 16×16 tile (skip 1px padding)
+                out[y][x] = new TextureRegion(sheet, px + 1, py + 1, CORE_TILE_SIZE, CORE_TILE_SIZE);
             }
         }
 
@@ -114,6 +131,11 @@ public class TileEngine {
 
     public void update(float delta) {
         handleCameraInput(delta);
+
+        // Snap camera to whole pixels to avoid subpixel sampling
+        camera.position.x = Math.round(camera.position.x);
+        camera.position.y = Math.round(camera.position.y);
+
         camera.update();
     }
 
@@ -145,7 +167,7 @@ public class TileEngine {
     }
 
     private void handleCameraInput(float delta) {
-        float speed = 300 * delta * camera.zoom;
+        float speed = 1200 * delta * Math.max(camera.zoom, 0.05f);
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) camera.position.y += speed;
         if (Gdx.input.isKeyPressed(Input.Keys.S)) camera.position.y -= speed;
@@ -162,7 +184,6 @@ public class TileEngine {
         float worldW = width * TILE_SIZE;
         float worldH = height * TILE_SIZE;
 
-        // Clamp so the camera never shows outside the world
         camera.position.x = Math.max(halfW, Math.min(camera.position.x, worldW - halfW));
         camera.position.y = Math.max(halfH, Math.min(camera.position.y, worldH - halfH));
     }
@@ -179,8 +200,17 @@ public class TileEngine {
 
     public int getTile(int x, int y) {
         if (x < 0 || x >= width || y < 0 || y >= height) {
-            return -1; // out of bounds
+            return -1;
         }
         return tiles[y][x];
+    }
+
+    public Vector2 screenToWorld(int screenX, int screenY) {
+        Vector3 world = camera.unproject(new Vector3(screenX, screenY, 0));
+        return new Vector2((int)(world.x / TILE_SIZE), (int)(world.y / TILE_SIZE));
+    }
+
+    public OrthographicCamera getCamera() {
+        return camera;
     }
 }
