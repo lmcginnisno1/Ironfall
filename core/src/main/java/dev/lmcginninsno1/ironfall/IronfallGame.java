@@ -10,8 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
-import dev.lmcginninsno1.ironfall.buildings.BuildingManager;
-import dev.lmcginninsno1.ironfall.buildings.BasicMiner;
+import dev.lmcginninsno1.ironfall.buildings.*;
 
 public class IronfallGame extends ApplicationAdapter {
 
@@ -24,6 +23,9 @@ public class IronfallGame extends ApplicationAdapter {
 
     private Texture minerTexture;
     private TextureRegion minerSprite;
+
+    private Texture coreTexture;
+    private TextureRegion coreSprite;
 
     private GameMode mode = GameMode.NORMAL;
 
@@ -44,6 +46,9 @@ public class IronfallGame extends ApplicationAdapter {
 
         buildingManager = new BuildingManager();
 
+        //start game by placing core
+        mode = GameMode.PLACING_CORE;
+
         // --- WORLD GENERATION ---
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
@@ -53,15 +58,19 @@ public class IronfallGame extends ApplicationAdapter {
             }
         }
 
-        generateVeins(engine, 11, 50, 60);
-        generateVeins(engine, 12, 30, 60);
-        generateVeins(engine, 13, 50, 60);
-        generateVeins(engine, 10, 100, 100);
+        generateVein(engine, 11, 50, 60);
+        generateVein(engine, 12, 30, 60);
+        generateVein(engine, 13, 50, 60);
+        generateVein(engine, 10, 100, 100);
 
         // --- LOAD BUILDING SPRITES ---
         minerTexture = new Texture("buildings/miner.png");
         minerTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         minerSprite = new TextureRegion(minerTexture);
+
+        coreTexture = new Texture("buildings/core.png");
+        coreTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        coreSprite = new TextureRegion(coreTexture);
     }
 
     @Override
@@ -72,7 +81,7 @@ public class IronfallGame extends ApplicationAdapter {
         engine.update(delta);
 
         // --- INPUT: ENTER PLACING MODE ---
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M) && mode == GameMode.NORMAL) {
             mode = GameMode.PLACING_MINER;
         }
 
@@ -93,21 +102,46 @@ public class IronfallGame extends ApplicationAdapter {
 
         // --- GHOST BUILDING ---
         if (mode == GameMode.PLACING_MINER) {
-            boolean valid = canPlaceMinerAt(tx, ty);
+            int px = tx - 1; // center 2×2 miner
+            int py = ty - 1;
 
-            if (valid) batch.setColor(0f, 1f, 0f, 0.5f);   // green tint
-            else batch.setColor(1f, 0f, 0f, 0.5f);         // red tint
+            boolean valid = canPlaceBuildingAt(px, py, 2, 2, true);
 
-            batch.draw(minerSprite, tx * 16, ty * 16, 32, 32);
+            if (valid) batch.setColor(0f, 1f, 0f, 0.5f);
+            else batch.setColor(1f, 0f, 0f, 0.5f);
+
+            batch.draw(minerSprite, px * 16, py * 16, 32, 32);
             batch.setColor(1f, 1f, 1f, 1f);
 
-            // --- CLICK TO PLACE ---
             if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && valid) {
-                buildingManager.add(new BasicMiner(tx, ty, 2, 2, minerSprite, engine));
+                buildingManager.add(new BasicMiner(px, py, 2, 2, minerSprite, engine));
                 mode = GameMode.NORMAL;
             }
 
-            // --- RIGHT CLICK TO CANCEL ---
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+                mode = GameMode.NORMAL;
+            }
+        }
+
+
+        if (mode == GameMode.PLACING_CORE) {
+
+            int px = tx - 2; // center 4×4 core
+            int py = ty - 2;
+
+            boolean valid = canPlaceBuildingAt(px, py, 4, 4, false);
+
+            if (valid) batch.setColor(0f, 1f, 0f, 0.5f);
+            else batch.setColor(1f, 0f, 0f, 0.5f);
+
+            batch.draw(coreSprite, px * 16, py * 16, 64, 64);
+            batch.setColor(1f, 1f, 1f, 1f);
+
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && valid) {
+                buildingManager.add(new Core(px, py, coreSprite));
+                mode = GameMode.NORMAL;
+            }
+
             if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
                 mode = GameMode.NORMAL;
             }
@@ -138,21 +172,28 @@ public class IronfallGame extends ApplicationAdapter {
         engine.dispose();
         font.dispose();
         minerTexture.dispose();
+        coreTexture.dispose();
     }
 
-    // --- VALIDATION: CAN PLACE MINER HERE? ---
-    private boolean canPlaceMinerAt(int x, int y) {
+    private boolean canPlaceBuildingAt(int x, int y, int w, int h, boolean requireOre) {
 
         // --- 1. Prevent placing on top of another building ---
-        if (buildingManager.isOccupied(x, y, 2, 2)) {
+        if (buildingManager.isOccupied(x, y, w, h)) {
             return false;
         }
+
+        // --- 2. Prevent clipping off the map ---
+        if (x < 0 || y < 0 || x + w > width || y + h > height) {
+            return false;
+        }
+
+        if(!requireOre) return true;
 
         int oreId = -1;
         int oreCount = 0;
 
-        for (int dy = 0; dy < 2; dy++) {
-            for (int dx = 0; dx < 2; dx++) {
+        for (int dy = 0; dy < h; dy++) {
+            for (int dx = 0; dx < w; dx++) {
                 int id = engine.getTile(x + dx, y + dy);
 
                 if (id >= 11 && id <= 13) {
@@ -166,7 +207,7 @@ public class IronfallGame extends ApplicationAdapter {
         return oreCount >= 1;
     }
 
-    private void generateVeins(TileEngine engine, int tileId, int seedCount, int veinLength) {
+    private void generateVein(TileEngine engine, int tileId, int seedCount, int veinLength) {
         for (int i = 0; i < seedCount; i++) {
             int x = (int)(Math.random() * width);
             int y = (int)(Math.random() * height);
