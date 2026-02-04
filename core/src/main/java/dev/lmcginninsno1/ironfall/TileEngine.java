@@ -148,15 +148,7 @@ public class TileEngine {
 
                 int id = tiles[y][x];
 
-                TileType type = switch (id) {
-                    case 0 -> TileType.DIRT;
-                    case 1 -> TileType.SAND;
-                    case 10 -> TileType.STONE;
-                    case 11 -> TileType.COAL;
-                    case 12 -> TileType.IRON;
-                    case 13 -> TileType.COPPER;
-                    default -> TileType.EMPTY;
-                };
+                TileType type = getTileTypeById(id);
 
                 TextureRegion tex = regions[type.row][type.col];
                 batch.draw(tex, x * TILE_SIZE, y * TILE_SIZE);
@@ -164,6 +156,18 @@ public class TileEngine {
         }
 
         batch.end();
+    }
+
+    public TileType getTileTypeById(int id) {
+        return switch (id) {
+            case 0 -> TileType.DIRT;
+            case 1 -> TileType.SAND;
+            case 10 -> TileType.STONE;
+            case 11 -> TileType.COAL;
+            case 12 -> TileType.IRON;
+            case 13 -> TileType.COPPER;
+            default -> TileType.EMPTY;
+        };
     }
 
     private void handleCameraInput(float delta) {
