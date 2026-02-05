@@ -6,7 +6,9 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import dev.lmcginninsno1.ironfall.buildings.*;
 
@@ -36,6 +38,15 @@ public class IronfallGame extends ApplicationAdapter {
 
     //supplier to disable camera dragging when placing buildings
     private final Supplier<Boolean> canDragCamera = () -> mode == GameMode.NORMAL;
+
+    private Building selectedBuilding = null;
+
+    private boolean draggingSelect = false;
+    private int selectStartX, selectStartY;
+
+    private Rectangle selectionRect = new Rectangle();
+    private Array<Building> multiSelection = new Array<>();
+
 
     @Override
     public void create() {
@@ -87,6 +98,14 @@ public class IronfallGame extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.C) && mode == GameMode.NORMAL)
             mode = GameMode.PLACING_CONVEYOR;
 
+        boolean xJustPressed = Gdx.input.isKeyJustPressed(Input.Keys.X);
+
+        if (xJustPressed && mode == GameMode.NORMAL) {
+            mode = GameMode.DELETE_MODE;
+            selectedBuilding = null;
+            multiSelection.clear();
+        }
+
         // --- MOUSE POSITION IN TILE COORDS ---
         Vector2 tilePos = engine.screenToWorld(Gdx.input.getX(), Gdx.input.getY());
         int tx = (int) tilePos.x;
@@ -107,6 +126,77 @@ public class IronfallGame extends ApplicationAdapter {
 
         buildingManager.update(delta);
         buildingManager.render(batch);
+
+        if(mode == GameMode.NORMAL){
+            // Left-click selects a building
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                Building b = buildingManager.getAt(tx, ty);
+                if (b != null) {
+                    selectedBuilding = b;
+                    mode = GameMode.SELECTING_SINGLE;
+                }
+            }
+        }
+
+        if (mode == GameMode.SELECTING_SINGLE) {
+            // Press X to delete selected
+            if (xJustPressed && selectedBuilding != null) {
+                buildingManager.remove(selectedBuilding);
+                selectedBuilding = null;
+                mode = GameMode.NORMAL;
+            }
+
+            // Right-click cancels selection
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+                selectedBuilding = null;
+                mode = GameMode.NORMAL;
+            }
+        }
+
+        if (mode == GameMode.DELETE_MODE) {
+            // Start dragging
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                draggingSelect = true;
+                selectStartX = tx;
+                selectStartY = ty;
+            }
+
+            // Update drag rectangle
+            if (draggingSelect && Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+                int x1 = Math.min(selectStartX, tx);
+                int y1 = Math.min(selectStartY, ty);
+                int x2 = Math.max(selectStartX, tx);
+                int y2 = Math.max(selectStartY, ty);
+
+                selectionRect.set(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+
+                // Update multi-selection
+                multiSelection.clear();
+                buildingManager.getAllInRect(selectionRect, multiSelection);
+            }
+
+            // Press X again → delete all selected (only if we have something selected)
+            if (xJustPressed && multiSelection.size > 0) {
+                for (Building b : multiSelection) {
+                    buildingManager.remove(b);
+                }
+                multiSelection.clear();
+                draggingSelect = false;
+                mode = GameMode.NORMAL;
+            }
+
+            // Right-click → cancel
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+                draggingSelect = false;
+                multiSelection.clear();
+                mode = GameMode.NORMAL;
+            }
+
+            // Stop dragging (MUST be after all rendering and input checks)
+            if (draggingSelect && !Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+                draggingSelect = false;
+            }
+        }
 
         if (mode == GameMode.PLACING_MINER) {
             int px = tx - 1;
@@ -195,6 +285,72 @@ public class IronfallGame extends ApplicationAdapter {
                 mode = GameMode.NORMAL;
             }
         }
+
+        // Highlight single selected building
+        if (mode == GameMode.SELECTING_SINGLE && selectedBuilding != null) {
+            int x = selectedBuilding.x * 16;
+            int y = selectedBuilding.y * 16;
+            int w = selectedBuilding.width * 16;
+            int h = selectedBuilding.height * 16;
+
+            // Fill (subtle yellow)
+            batch.setColor(1f, 1f, 0f, 0.25f);
+            batch.draw(Assets.whitePixel, x, y, w, h);
+
+            // Border (stronger yellow)
+            batch.setColor(1f, 1f, 0f, 0.9f);
+            batch.draw(Assets.whitePixel, x, y, w, 2);         // bottom
+            batch.draw(Assets.whitePixel, x, y + h - 2, w, 2); // top
+            batch.draw(Assets.whitePixel, x, y, 2, h);         // left
+            batch.draw(Assets.whitePixel, x + w - 2, y, 2, h); // right
+
+            batch.setColor(1f, 1f, 1f, 1f);
+        }
+
+        // Highlight buildings in mass delete selection
+        if (mode == GameMode.DELETE_MODE && multiSelection.size > 0) {
+            for (Building b : multiSelection) {
+                int x = b.x * 16;
+                int y = b.y * 16;
+                int w = b.width * 16;
+                int h = b.height * 16;
+
+                // Fill (subtle yellow)
+                batch.setColor(1f, 1f, 0f, 0.25f);
+                batch.draw(Assets.whitePixel, x, y, w, h);
+
+                // Border (stronger yellow)
+                batch.setColor(1f, 1f, 0f, 0.9f);
+                batch.draw(Assets.whitePixel, x, y, w, 2);         // bottom
+                batch.draw(Assets.whitePixel, x, y + h - 2, w, 2); // top
+                batch.draw(Assets.whitePixel, x, y, 2, h);         // left
+                batch.draw(Assets.whitePixel, x + w - 2, y, 2, h); // right
+
+                batch.setColor(1f, 1f, 1f, 1f);
+            }
+        }
+
+        // Draw selection box in DELETE_MODE
+        if (mode == GameMode.DELETE_MODE && draggingSelect) {
+            float x = selectionRect.x * 16;
+            float y = selectionRect.y * 16;
+            float w = selectionRect.width * 16;
+            float h = selectionRect.height * 16;
+
+            // Fill (light blue)
+            batch.setColor(0f, 0.6f, 1f, 0.25f);
+            batch.draw(Assets.whitePixel, x, y, w, h);
+
+            // Border (stronger blue)
+            batch.setColor(0f, 0.6f, 1f, 0.9f);
+            batch.draw(Assets.whitePixel, x, y, w, 2);         // bottom
+            batch.draw(Assets.whitePixel, x, y + h - 2, w, 2); // top
+            batch.draw(Assets.whitePixel, x, y, 2, h);         // left
+            batch.draw(Assets.whitePixel, x + w - 2, y, 2, h); // right
+
+            batch.setColor(1f, 1f, 1f, 1f);
+        }
+
 
         batch.end();
 

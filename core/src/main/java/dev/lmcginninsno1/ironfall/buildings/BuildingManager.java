@@ -1,6 +1,9 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -26,8 +29,8 @@ public class BuildingManager {
         return true;
     }
 
-    public boolean place(Building b) {
-        if (!canPlace(b.x, b.y, b.width, b.height)) return false;
+    public void place(Building b) {
+        if (!canPlace(b.x, b.y, b.width, b.height)) return;
 
         // Add to list
         buildings.add(b);
@@ -38,8 +41,6 @@ public class BuildingManager {
                 grid.put(key(ix, iy), b);
             }
         }
-
-        return true;
     }
 
     public Building getAt(int x, int y) {
@@ -47,6 +48,11 @@ public class BuildingManager {
     }
 
     public void remove(Building b) {
+        // Prevent removing the Core
+        if (b instanceof Core) {
+            return;
+        }
+
         buildings.remove(b);
 
         for (int ix = b.x; ix < b.x + b.width; ix++) {
@@ -56,11 +62,20 @@ public class BuildingManager {
         }
     }
 
+
     public void update(float delta) {
         for (Building b : buildings) b.update(delta);
     }
 
     public void render(SpriteBatch batch) {
         for (Building b : buildings) b.render(batch);
+    }
+
+    public void getAllInRect(Rectangle rect, Array<Building> out) {
+        for (Building b : buildings) {
+            if (rect.contains(b.x, b.y)) {
+                out.add(b);
+            }
+        }
     }
 }

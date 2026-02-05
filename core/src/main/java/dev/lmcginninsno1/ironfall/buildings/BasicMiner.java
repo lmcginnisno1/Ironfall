@@ -39,15 +39,6 @@ public class BasicMiner extends Building {
 
         if (timer >= 1f) {
             timer = 0f;
-
-            if (oreId != -1 && oreTiles > 0) {
-                System.out.println(
-                    "Miner at (" + x + "," + y + ") produced " +
-                        oreTiles + " of ore type " + oreId
-                );
-            }
         }
     }
-
-
 }
