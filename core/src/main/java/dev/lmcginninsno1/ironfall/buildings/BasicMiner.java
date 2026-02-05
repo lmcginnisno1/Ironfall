@@ -1,6 +1,6 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import dev.lmcginninsno1.ironfall.Assets;
 import dev.lmcginninsno1.ironfall.TileEngine;
 
 public class BasicMiner extends Building {
@@ -10,8 +10,8 @@ public class BasicMiner extends Building {
     private final int oreId;        // 11 = coal, 12 = iron, 13 = copper
     private final int oreTiles;     // number of ore tiles under it (1–4)
 
-    public BasicMiner(int x, int y, int w, int h, TextureRegion sprite, TileEngine engine) {
-        super(x, y, w, h, sprite);
+    public BasicMiner(int x, int y, TileEngine engine) {
+        super(x, y, 2, 2, Assets.basicMiner);
 
         // Scan the 2×2 footprint for ore tiles
         int foundOreId = -1;

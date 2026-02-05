@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
+import java.util.function.Supplier;
+
 public class TileEngine {
 
     public static final int TILE_SIZE = 16;       // world tile size
@@ -30,7 +32,7 @@ public class TileEngine {
     private float lastMouseY;
     private boolean dragging = false;
 
-    public TileEngine(int width, int height) {
+    public TileEngine(int width, int height, Supplier<Boolean> canDragCamera) {
         this.width = width;
         this.height = height;
         this.tiles = new int[height][width];
@@ -90,7 +92,7 @@ public class TileEngine {
 
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
-                if (!dragging) return false;
+                if (!dragging || !canDragCamera.get()) return false;
 
                 float dx = screenX - lastMouseX;
                 float dy = screenY - lastMouseY;
@@ -148,7 +150,7 @@ public class TileEngine {
 
                 int id = tiles[y][x];
 
-                TileType type = getTileTypeById(id);
+                TileType type = TileType.fromId(id);
 
                 TextureRegion tex = regions[type.row][type.col];
                 batch.draw(tex, x * TILE_SIZE, y * TILE_SIZE);
@@ -156,18 +158,6 @@ public class TileEngine {
         }
 
         batch.end();
-    }
-
-    public TileType getTileTypeById(int id) {
-        return switch (id) {
-            case 0 -> TileType.DIRT;
-            case 1 -> TileType.SAND;
-            case 10 -> TileType.STONE;
-            case 11 -> TileType.COAL;
-            case 12 -> TileType.IRON;
-            case 13 -> TileType.COPPER;
-            default -> TileType.EMPTY;
-        };
     }
 
     private void handleCameraInput(float delta) {
