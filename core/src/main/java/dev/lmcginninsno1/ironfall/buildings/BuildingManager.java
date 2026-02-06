@@ -62,7 +62,6 @@ public class BuildingManager {
         }
     }
 
-
     public void update(float delta) {
         for (Building b : buildings) b.update(delta);
     }
@@ -77,5 +76,9 @@ public class BuildingManager {
                 out.add(b);
             }
         }
+    }
+
+    public ArrayList<Building> getBuildings() {
+        return buildings;
     }
 }

@@ -15,17 +15,20 @@ public class PlacementController {
     private final TileEngine engine;
     private final BuildingManager buildings;
 
-    // Conveyor drag state
+    private final ConveyorPathHelper conveyorHelper;
+
     private boolean draggingConveyor = false;
     private int dragStartX, dragStartY;
 
-    // Mouse state tracking for release detection
     private boolean prevLeftDown = false;
+    private boolean dragDirectionLocked = false;
+    private boolean horizontalFirst = true;
 
     public PlacementController(IronfallGame game, TileEngine engine, BuildingManager buildings) {
         this.game = game;
         this.engine = engine;
         this.buildings = buildings;
+        this.conveyorHelper = new ConveyorPathHelper(buildings);
     }
 
     public void update() {
@@ -36,7 +39,6 @@ public class PlacementController {
         prevLeftDown = leftDown;
 
         switch (game.mode) {
-
             case PLACING_MINER -> updateMinerPlacement(leftJustPressed);
             case PLACING_CORE -> updateCorePlacement(leftJustPressed);
             case PLACING_CONVEYOR -> updateConveyorPlacement(leftJustPressed, leftJustReleased);
@@ -44,9 +46,7 @@ public class PlacementController {
     }
 
     public void render(SpriteBatch batch) {
-
         switch (game.mode) {
-
             case PLACING_MINER -> renderMinerGhost(batch);
             case PLACING_CORE -> renderCoreGhost(batch);
             case PLACING_CONVEYOR -> renderConveyorGhost(batch);
@@ -54,7 +54,6 @@ public class PlacementController {
     }
 
     private void updateMinerPlacement(boolean leftJustPressed) {
-
         int px = game.tileX - 1;
         int py = game.tileY - 1;
 
@@ -72,7 +71,6 @@ public class PlacementController {
     }
 
     private void renderMinerGhost(SpriteBatch batch) {
-
         int px = game.tileX - 1;
         int py = game.tileY - 1;
 
@@ -85,7 +83,6 @@ public class PlacementController {
     }
 
     private void updateCorePlacement(boolean leftJustPressed) {
-
         int px = game.tileX - 2;
         int py = game.tileY - 2;
 
@@ -102,7 +99,6 @@ public class PlacementController {
     }
 
     private void renderCoreGhost(SpriteBatch batch) {
-
         int px = game.tileX - 2;
         int py = game.tileY - 2;
 
@@ -114,34 +110,41 @@ public class PlacementController {
     }
 
     private void updateConveyorPlacement(boolean leftJustPressed, boolean leftJustReleased) {
-
         int tx = game.tileX;
         int ty = game.tileY;
 
-        // Start drag
         if (leftJustPressed) {
             draggingConveyor = true;
             dragStartX = tx;
             dragStartY = ty;
+            dragDirectionLocked = false;
         }
 
-        // Release drag → place conveyors
-        if (draggingConveyor && leftJustReleased) {
+        if (draggingConveyor && !dragDirectionLocked) {
+            int dx = Math.abs(tx - dragStartX);
+            int dy = Math.abs(ty - dragStartY);
 
+            if (dx > 0 || dy > 0) {
+                horizontalFirst = dx >= dy;
+                dragDirectionLocked = true;
+            }
+        }
+
+        if (draggingConveyor && leftJustReleased) {
             draggingConveyor = false;
 
-            ArrayList<Vector2> path = computeConveyorPath(dragStartX, dragStartY, tx, ty);
+            ArrayList<Vector2> path =
+                conveyorHelper.computePath(dragStartX, dragStartY, tx, ty, horizontalFirst);
 
             for (int i = 0; i < path.size(); i++) {
                 Vector2 p = path.get(i);
-                Conveyor.Direction dir = getDirectionForIndex(path, i);
-                buildings.place(new Conveyor((int) p.x, (int) p.y, dir));
+                Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(path, i);
+                buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
             }
 
             game.mode = GameMode.NORMAL;
         }
 
-        // Cancel with RMB
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
             draggingConveyor = false;
             game.mode = GameMode.NORMAL;
@@ -149,61 +152,23 @@ public class PlacementController {
     }
 
     private void renderConveyorGhost(SpriteBatch batch) {
-
         if (!draggingConveyor) return;
 
         int tx = game.tileX;
         int ty = game.tileY;
 
-        ArrayList<Vector2> path = computeConveyorPath(dragStartX, dragStartY, tx, ty);
+        ArrayList<Vector2> path =
+            conveyorHelper.computePath(dragStartX, dragStartY, tx, ty, horizontalFirst);
 
         for (int i = 0; i < path.size(); i++) {
             Vector2 p = path.get(i);
-            Conveyor.Direction dir = getDirectionForIndex(path, i);
+            Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(path, i);
 
             batch.setColor(1f, 1f, 1f, 0.5f);
             batch.draw(getConveyorSprite(dir), p.x * 16, p.y * 16, 16, 16);
         }
 
         batch.setColor(1f, 1f, 1f, 1f);
-    }
-
-    private ArrayList<Vector2> computeConveyorPath(int sx, int sy, int ex, int ey) {
-        ArrayList<Vector2> path = new ArrayList<>();
-
-        int x = sx;
-        int y = sy;
-
-        while (x != ex) {
-            path.add(new Vector2(x, y));
-            x += (ex > x ? 1 : -1);
-        }
-
-        while (y != ey) {
-            path.add(new Vector2(x, y));
-            y += (ey > y ? 1 : -1);
-        }
-
-        path.add(new Vector2(ex, ey));
-        return path;
-    }
-
-    private Conveyor.Direction directionFor(Vector2 a, Vector2 b) {
-        if (b.x > a.x) return Conveyor.Direction.RIGHT;
-        if (b.x < a.x) return Conveyor.Direction.LEFT;
-        if (b.y > a.y) return Conveyor.Direction.UP;
-        return Conveyor.Direction.DOWN;
-    }
-
-    private Conveyor.Direction getDirectionForIndex(ArrayList<Vector2> path, int i) {
-        if (path.size() == 1) return Conveyor.Direction.RIGHT;
-
-        Vector2 current = path.get(i);
-
-        if (i == 0) return directionFor(current, path.get(i + 1));
-        if (i == path.size() - 1) return directionFor(path.get(i - 1), current);
-
-        return directionFor(current, path.get(i + 1));
     }
 
     private com.badlogic.gdx.graphics.g2d.TextureRegion getConveyorSprite(Conveyor.Direction dir) {
