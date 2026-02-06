@@ -34,6 +34,7 @@ public class BuildingManager {
 
         // Add to list
         buildings.add(b);
+        b.setWorld(this);
 
         // Register each tile in the footprint
         for (int ix = b.x; ix < b.x + b.width; ix++) {

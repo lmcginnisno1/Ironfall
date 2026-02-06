@@ -36,7 +36,7 @@ public class TileEngine {
 
         // Camera setup
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 1920, 1080);
+        camera.setToOrtho(false, 960, 544);
 
         // Center camera on world
         camera.position.set(width * TILE_SIZE / 2f, height * TILE_SIZE / 2f, 0);

@@ -1,19 +1,25 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
 import dev.lmcginninsno1.ironfall.Assets;
+import dev.lmcginninsno1.ironfall.Item;
 import dev.lmcginninsno1.ironfall.TileEngine;
+import dev.lmcginninsno1.ironfall.TileType;
 
 public class BasicMiner extends Building {
 
     private float timer = 0f;
 
     private final int oreId;        // 11 = coal, 12 = iron, 13 = copper
-    private final int oreTiles;     // number of ore tiles under it (1–4)
+
+    // 0 or 1 item waiting to be output
+    private Item buffer = null;
+
+    // 0.25 ore/sec per ore tile
+    private final float rate;
 
     public BasicMiner(int x, int y, TileEngine engine) {
         super(x, y, 2, 2, Assets.basicMiner);
 
-        // Scan the 2×2 footprint for ore tiles
         int foundOreId = -1;
         int count = 0;
 
@@ -21,7 +27,6 @@ public class BasicMiner extends Building {
             for (int dx = 0; dx < 2; dx++) {
                 int tile = engine.getTile(x + dx, y + dy);
 
-                // Ore tiles are 11, 12, 13
                 if (tile >= 11 && tile <= 13) {
                     if (foundOreId == -1) foundOreId = tile;
                     count++;
@@ -30,15 +35,48 @@ public class BasicMiner extends Building {
         }
 
         this.oreId = foundOreId;
-        this.oreTiles = Math.min(count, 4); // cap at 4
+        // number of ore tiles under it (1–4)
+        int oreTiles = Math.min(count, 4);
+
+        // production rate based on ore coverage
+        this.rate = 0.25f * oreTiles;
     }
 
     @Override
     public void update(float delta) {
-        timer += delta;
+        // If buffer is full, try to output before producing more
+        if (buffer != null) {
+            tryOutput();
+            if (buffer != null) return;
+        }
 
-        if (timer >= 1f) {
-            timer = 0f;
+        // Produce based on rate
+        timer += delta;
+        if (timer >= 1f / rate) {
+            timer -= 1f / rate;
+            buffer = new Item(TileType.fromId(oreId));
+        }
+    }
+
+    private void tryOutput() {
+        // Four tiles directly touching the miner's 2×2 footprint
+        int[][] offsets = {
+            { -1,  0 }, // left side, middle
+            {  2,  0 }, // right side, middle
+            {  0, -1 }, // bottom, middle
+            {  0,  2 }  // top, middle
+        };
+
+        for (int[] o : offsets) {
+            int tx = x + o[0];
+            int ty = y + o[1];
+
+            Building b = world.getAt(tx, ty);
+            if (b instanceof Conveyor c && c.canAcceptItem()) {
+                c.acceptItem(buffer);
+                buffer = null;
+                return;
+            }
         }
     }
 }

@@ -16,6 +16,8 @@ import dev.lmcginninsno1.ironfall.placement.*;
 
 import java.util.function.Supplier;
 
+import static dev.lmcginninsno1.ironfall.render.TextUtil.drawOutlined;
+
 public class IronfallGame extends ApplicationAdapter {
 
     // Core rendering
@@ -58,7 +60,6 @@ public class IronfallGame extends ApplicationAdapter {
 
     @Override
     public void create() {
-
         batch = new SpriteBatch();
         engine = new TileEngine(width, height);
 
@@ -82,7 +83,12 @@ public class IronfallGame extends ApplicationAdapter {
         selectionRenderer = new SelectionRenderer(selectionManager);
         worldRenderer = new WorldRenderer(this, engine, buildingManager);
         overlayRenderer = new OverlayRenderer(this, selectionManager, font);
-        cameraController = new CameraController(engine.getCamera(), () -> mode == GameMode.NORMAL);
+        cameraController = new CameraController(
+            engine.getCamera(),
+            () -> mode == GameMode.NORMAL,
+            width * TileEngine.TILE_SIZE,
+            height * TileEngine.TILE_SIZE
+        );
         placementController = new PlacementController(this, engine, buildingManager);
 
         // Start game by placing core
@@ -138,10 +144,13 @@ public class IronfallGame extends ApplicationAdapter {
         // Tooltip near mouse
         if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height) {
             TileType t = TileType.fromId(engine.getTile(tileX, tileY));
-            font.draw(batch,
+            drawOutlined(
+                font,
+                batch,
                 t.name + " (" + tileX + ", " + tileY + ")",
                 Gdx.input.getX() + 16,
-                screenHeight - Gdx.input.getY() + 16);
+                screenHeight - Gdx.input.getY() + 16
+            );
         }
 
         batch.end();

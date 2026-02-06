@@ -12,6 +12,7 @@ public abstract class Building {
     public final int height;
 
     protected TextureRegion sprite;
+    protected BuildingManager world;
 
     public Building(int x, int y, int width, int height, TextureRegion sprite) {
         this.x = x;
@@ -25,5 +26,9 @@ public abstract class Building {
 
     public void render(SpriteBatch batch) {
         batch.draw(sprite, x * 16, y * 16, width * 16, height * 16);
+    }
+
+    public void setWorld(BuildingManager world) {
+        this.world = world;
     }
 }

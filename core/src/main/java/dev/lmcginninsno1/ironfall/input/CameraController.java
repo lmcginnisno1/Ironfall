@@ -13,9 +13,12 @@ public class CameraController {
 
     private boolean dragging = false;
     private int lastX, lastY;
+    private final int worldWidth, worldHeight;
 
-    public CameraController(OrthographicCamera camera, BooleanSupplier dragEnabled) {
+    public CameraController(OrthographicCamera camera, BooleanSupplier dragEnabled, int worldWidth, int worldHeight) {
         this.camera = camera;
+        this.worldWidth = worldWidth;
+        this.worldHeight = worldHeight;
 
         // Register scroll + drag input
         Gdx.input.setInputProcessor(new InputAdapter() {
@@ -71,6 +74,8 @@ public class CameraController {
         if (Gdx.input.isKeyPressed(Input.Keys.A)) camera.position.x -= speed;
         if (Gdx.input.isKeyPressed(Input.Keys.D)) camera.position.x += speed;
 
+        clampCamera();
+
         camera.update();
     }
 
@@ -79,7 +84,7 @@ public class CameraController {
 
         float zoomSpeed = 0.1f;
         camera.zoom += amountY * zoomSpeed;
-        camera.zoom = Math.max(0.1f, Math.min(camera.zoom, 1f));
+        camera.zoom = Math.max(0.1f, Math.min(camera.zoom, 3f));
 
         zoomTowardCursor(oldZoom);
     }
@@ -96,5 +101,17 @@ public class CameraController {
 
         camera.position.x += (worldBeforeX - worldAfterX);
         camera.position.y += (worldBeforeY - worldAfterY);
+    }
+
+    private void clampCamera() {
+        float halfW = camera.viewportWidth * camera.zoom * 0.5f;
+        float halfH = camera.viewportHeight * camera.zoom * 0.5f;
+
+        float maxX = worldWidth - halfW;
+
+        float maxY = worldHeight - halfH;
+
+        camera.position.x = Math.max(halfW, Math.min(camera.position.x, maxX));
+        camera.position.y = Math.max(halfH, Math.min(camera.position.y, maxY));
     }
 }
