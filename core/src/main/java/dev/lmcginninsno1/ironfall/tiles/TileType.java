@@ -1,4 +1,4 @@
-package dev.lmcginninsno1.ironfall;
+package dev.lmcginninsno1.ironfall.tiles;
 
 public enum TileType {
 
@@ -8,7 +8,10 @@ public enum TileType {
     STONE(2, 9, 10, "stone"),
     COAL(10, 10, 11, "coal"),
     IRON(10, 11, 12, "iron"),
-    COPPER(11, 11, 13, "copper"),;
+    COPPER(11, 11, 13, "copper"),
+    COAL_ORE(10, 14, 21, "coal_ore"),
+    IRON_ORE(10, 15, 22, "iron_ore"),
+    COPPER_ORE(11, 15, 23, "copper_ore");
 
     public final int row;
     public final int col;

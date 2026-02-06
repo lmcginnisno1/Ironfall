@@ -1,4 +1,4 @@
-package dev.lmcginninsno1.ironfall;
+package dev.lmcginninsno1.ironfall.tiles;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -36,7 +36,7 @@ public class TileEngine {
 
         // Camera setup
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 960, 544);
+        camera.setToOrtho(false);   // no fixed viewport
 
         // Center camera on world
         camera.position.set(width * TILE_SIZE / 2f, height * TILE_SIZE / 2f, 0);
@@ -62,7 +62,7 @@ public class TileEngine {
 
     public void update() {
         // Camera is controlled externally (CameraController)
-        camera.update();
+//        camera.update();
     }
 
     public void render(SpriteBatch batch) {
@@ -109,5 +109,9 @@ public class TileEngine {
 
     public int getHeight() {
         return height;
+    }
+
+    public TextureRegion getRegion(int row, int col) {
+        return regions[row][col];
     }
 }

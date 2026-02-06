@@ -2,7 +2,7 @@ package dev.lmcginninsno1.ironfall.render;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import dev.lmcginninsno1.ironfall.GameMode;
+import dev.lmcginninsno1.ironfall.game.GameMode;
 import dev.lmcginninsno1.ironfall.IronfallGame;
 import dev.lmcginninsno1.ironfall.buildings.Core;
 import dev.lmcginninsno1.ironfall.selection.SelectionManager;

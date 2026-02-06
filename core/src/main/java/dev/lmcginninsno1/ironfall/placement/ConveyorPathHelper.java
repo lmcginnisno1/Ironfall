@@ -16,13 +16,6 @@ public class ConveyorPathHelper {
     }
 
     public ArrayList<Vector2> computePath(int sx, int sy, int ex, int ey, boolean horizontalFirst) {
-        Building target = getBuildingAt(ex, ey);
-        if (target != null) {
-            Vector2 entry = getBestEntryForBuilding(target, sx, sy);
-            ex = (int) entry.x;
-            ey = (int) entry.y;
-        }
-
         ArrayList<Vector2> path = new ArrayList<>();
         int x = sx;
         int y = sy;
@@ -65,16 +58,6 @@ public class ConveyorPathHelper {
         return Conveyor.Direction.DOWN;
     }
 
-    private Building getBuildingAt(int tx, int ty) {
-        for (Building b : buildings.getBuildings()) {
-            if (tx >= b.x && tx < b.x + b.width &&
-                ty >= b.y && ty < b.y + b.height) {
-                return b;
-            }
-        }
-        return null;
-    }
-
     private Building getAdjacentBuilding(int tx, int ty) {
         for (Building b : buildings.getBuildings()) {
             if (tx == b.x - 1 && ty >= b.y && ty < b.y + b.height) return b;
@@ -83,23 +66,5 @@ public class ConveyorPathHelper {
             if (ty == b.y + b.height && tx >= b.x && tx < b.x + b.width) return b;
         }
         return null;
-    }
-
-    private Vector2 getBestEntryForBuilding(Building b, int sx, int sy) {
-        float midX = b.x + b.width / 2f;
-        float midY = b.y + b.height / 2f;
-
-        float dx = sx - midX;
-        float dy = sy - midY;
-
-        if (Math.abs(dx) > Math.abs(dy)) {
-            return dx < 0
-                ? new Vector2(b.x - 1, (int) midY)
-                : new Vector2(b.x + b.width, (int) midY);
-        } else {
-            return dy < 0
-                ? new Vector2((int) midX, b.y - 1)
-                : new Vector2((int) midX, b.y + b.height);
-        }
     }
 }

@@ -1,9 +1,9 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
-import dev.lmcginninsno1.ironfall.Assets;
-import dev.lmcginninsno1.ironfall.Item;
-import dev.lmcginninsno1.ironfall.TileEngine;
-import dev.lmcginninsno1.ironfall.TileType;
+import dev.lmcginninsno1.ironfall.items.Item;
+import dev.lmcginninsno1.ironfall.items.ItemType;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
+import dev.lmcginninsno1.ironfall.tiles.TileEngine;
 
 public class BasicMiner extends Building {
 
@@ -54,7 +54,7 @@ public class BasicMiner extends Building {
         timer += delta;
         if (timer >= 1f / rate) {
             timer -= 1f / rate;
-            buffer = new Item(TileType.fromId(oreId));
+            buffer = new Item(ItemType.oreTypeFromId(oreId));
         }
     }
 

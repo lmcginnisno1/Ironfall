@@ -9,12 +9,14 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 
 import dev.lmcginninsno1.ironfall.buildings.*;
+import dev.lmcginninsno1.ironfall.game.GameMode;
 import dev.lmcginninsno1.ironfall.input.*;
 import dev.lmcginninsno1.ironfall.render.*;
 import dev.lmcginninsno1.ironfall.selection.*;
 import dev.lmcginninsno1.ironfall.placement.*;
-
-import java.util.function.Supplier;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
+import dev.lmcginninsno1.ironfall.tiles.TileEngine;
+import dev.lmcginninsno1.ironfall.tiles.TileType;
 
 import static dev.lmcginninsno1.ironfall.render.TextUtil.drawOutlined;
 
@@ -55,9 +57,6 @@ public class IronfallGame extends ApplicationAdapter {
     // Debug
     public boolean showGrid = false;
 
-    // Supplier to disable camera dragging during placement
-    private final Supplier<Boolean> canDragCamera = () -> mode == GameMode.NORMAL;
-
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -75,7 +74,7 @@ public class IronfallGame extends ApplicationAdapter {
         hudCamera.setToOrtho(false, screenWidth, screenHeight);
         hudCamera.update();
 
-        buildingManager = new BuildingManager();
+        buildingManager = new BuildingManager(width, height);
 
         // Subsystems
         selectionManager = new SelectionManager(this, buildingManager);
@@ -110,30 +109,32 @@ public class IronfallGame extends ApplicationAdapter {
 
     @Override
     public void render() {
-
         ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
+
         float delta = Gdx.graphics.getDeltaTime();
 
-        // Update tile coords
-        screenToTile(Gdx.input.getX(), Gdx.input.getY());
+        cameraController.update(delta);   // zoomTowardCursor happens here
 
-        // Update subsystems
+        OrthographicCamera cam = engine.getCamera();
+        cam.viewportWidth = Gdx.graphics.getWidth();
+        cam.viewportHeight = Gdx.graphics.getHeight();
+        cam.update();                     // update AFTER zoomTowardCursor
+
         engine.update();
-        cameraController.update(delta);
         inputController.update();
         selectionManager.update();
         buildingManager.update(delta);
         placementController.update();
 
-        // --- WORLD RENDERING ---
+        screenToTile(Gdx.input.getX(), Gdx.input.getY());  // moved AFTER zoom
+
         batch.setProjectionMatrix(engine.getCamera().combined);
         batch.begin();
         worldRenderer.render(batch);
         selectionRenderer.render(batch);
-        placementController.render(batch); // ghost previews
+        placementController.render(batch);
         batch.end();
 
-        // --- HUD / OVERLAYS ---
         hudCamera.setToOrtho(false, screenWidth, screenHeight);
         hudCamera.update();
 
@@ -141,7 +142,6 @@ public class IronfallGame extends ApplicationAdapter {
         batch.begin();
         overlayRenderer.render(batch);
 
-        // Tooltip near mouse
         if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height) {
             TileType t = TileType.fromId(engine.getTile(tileX, tileY));
             drawOutlined(
@@ -193,5 +193,14 @@ public class IronfallGame extends ApplicationAdapter {
                 y = Math.max(0, Math.min(y, height - 1));
             }
         }
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        screenWidth = width;
+        screenHeight = height;
+
+        engine.getCamera().setToOrtho(false, width, height);
+        hudCamera.setToOrtho(false, width, height);
     }
 }

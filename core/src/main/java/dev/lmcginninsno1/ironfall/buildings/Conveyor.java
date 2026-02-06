@@ -1,8 +1,8 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import dev.lmcginninsno1.ironfall.Assets;
-import dev.lmcginninsno1.ironfall.Item;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
+import dev.lmcginninsno1.ironfall.items.Item;
 
 public class Conveyor extends Building {
 
@@ -14,6 +14,9 @@ public class Conveyor extends Building {
     // 4 items/sec → 0.25s per move
     private static final float MOVE_TIME = 0.25f;
     private float moveCooldown = 0f;
+
+    // continuous visual animation phase (0→1 looping)
+    private float animPhase = 0f;
 
     public Conveyor(int x, int y, Direction direction) {
         super(x, y, 1, 1, getSpriteFor(direction));
@@ -39,6 +42,10 @@ public class Conveyor extends Building {
 
     @Override
     public void update(float delta) {
+        // continuous visual motion
+        animPhase += delta / MOVE_TIME;
+        if (animPhase >= 1f) animPhase -= 1f;
+
         if (item == null) return;
 
         moveCooldown -= delta;
@@ -71,5 +78,13 @@ public class Conveyor extends Building {
             core.acceptItem(item);
             item = null;
         }
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public float getAnimPhase() {
+        return animPhase;
     }
 }

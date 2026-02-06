@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.math.Vector3;
 
 import java.util.function.BooleanSupplier;
 
@@ -65,6 +66,7 @@ public class CameraController {
     }
 
     public void update(float delta) {
+        camera.update();
 
         float moveSpeed = 1200f;
         float speed = moveSpeed * delta * camera.zoom;
@@ -75,32 +77,39 @@ public class CameraController {
         if (Gdx.input.isKeyPressed(Input.Keys.D)) camera.position.x += speed;
 
         clampCamera();
-
-        camera.update();
     }
 
     private void handleScroll(float amountY) {
-        float oldZoom = camera.zoom;
-
         float zoomSpeed = 0.1f;
-        camera.zoom += amountY * zoomSpeed;
-        camera.zoom = Math.max(0.1f, Math.min(camera.zoom, 3f));
 
-        zoomTowardCursor(oldZoom);
+        float oldZoom = camera.zoom;
+        float newZoom = oldZoom + amountY * zoomSpeed;
+        newZoom = Math.max(0.1f, Math.min(newZoom, 3f));
+
+        zoomTowardCursor(newZoom);
     }
 
-    private void zoomTowardCursor(float oldZoom) {
+    private void zoomTowardCursor(float newZoom) {
         float mx = Gdx.input.getX();
-        float my = Gdx.input.getY();
+        // Flip Y coordinate because libGDX screen Y goes from top to bottom
+        float my = Gdx.graphics.getHeight() - Gdx.input.getY();
 
-        float worldBeforeX = (mx - camera.viewportWidth / 2f) * oldZoom + camera.position.x;
-        float worldBeforeY = (camera.viewportHeight / 2f - my) * oldZoom + camera.position.y;
+        // Get world position before zoom
+        Vector3 before = camera.unproject(new Vector3(mx, my, 0));
 
-        float worldAfterX = (mx - camera.viewportWidth / 2f) * camera.zoom + camera.position.x;
-        float worldAfterY = (camera.viewportHeight / 2f - my) * camera.zoom + camera.position.y;
+        // Apply zoom
+        camera.zoom = newZoom;
+        camera.update();
 
-        camera.position.x += (worldBeforeX - worldAfterX);
-        camera.position.y += (worldBeforeY - worldAfterY);
+        // Get world position after zoom
+        Vector3 after = camera.unproject(new Vector3(mx, my, 0));
+
+        // Move camera so cursor stays on same world position
+        camera.position.x += (before.x - after.x);
+        camera.position.y -= (before.y - after.y);
+
+        // Clamp AFTER adjusting for zoom
+        clampCamera();
     }
 
     private void clampCamera() {

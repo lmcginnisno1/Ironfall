@@ -2,7 +2,7 @@ package dev.lmcginninsno1.ironfall.input;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import dev.lmcginninsno1.ironfall.GameMode;
+import dev.lmcginninsno1.ironfall.game.GameMode;
 import dev.lmcginninsno1.ironfall.IronfallGame;
 import dev.lmcginninsno1.ironfall.selection.SelectionManager;
 

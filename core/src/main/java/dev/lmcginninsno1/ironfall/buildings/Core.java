@@ -1,22 +1,22 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
-import dev.lmcginninsno1.ironfall.Assets;
-import dev.lmcginninsno1.ironfall.Item;
-import dev.lmcginninsno1.ironfall.TileType;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
+import dev.lmcginninsno1.ironfall.items.Item;
+import dev.lmcginninsno1.ironfall.items.ItemType;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class Core extends Building {
 
-    private final Map<TileType, Integer> inventory = new HashMap<>();
+    private final Map<ItemType, Integer> inventory = new HashMap<>();
 
     public Core(int x, int y) {
         super(x, y, 4, 4, Assets.core);
     }
 
     public void acceptItem(Item item) {
-        TileType type = item.type;
+        ItemType type = item.type();
         inventory.put(type, inventory.getOrDefault(type, 0) + 1);
     }
 
@@ -25,7 +25,7 @@ public class Core extends Building {
         // Core has no active behavior yet
     }
 
-    public Map<TileType, Integer> getInventory() {
+    public Map<ItemType, Integer> getInventory() {
         return inventory;
     }
 

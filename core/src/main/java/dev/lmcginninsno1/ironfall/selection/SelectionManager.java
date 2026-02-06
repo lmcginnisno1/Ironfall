@@ -2,7 +2,7 @@ package dev.lmcginninsno1.ironfall.selection;
 
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
-import dev.lmcginninsno1.ironfall.GameMode;
+import dev.lmcginninsno1.ironfall.game.GameMode;
 import dev.lmcginninsno1.ironfall.IronfallGame;
 import dev.lmcginninsno1.ironfall.buildings.Building;
 import dev.lmcginninsno1.ironfall.buildings.BuildingManager;

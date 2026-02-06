@@ -2,7 +2,7 @@ package dev.lmcginninsno1.ironfall.selection;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
-import dev.lmcginninsno1.ironfall.Assets;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
 import dev.lmcginninsno1.ironfall.buildings.Building;
 
 public class SelectionRenderer {

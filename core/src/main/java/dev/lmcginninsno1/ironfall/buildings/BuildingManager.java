@@ -8,12 +8,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class BuildingManager {
-
     // List for update/render order
     private final ArrayList<Building> buildings = new ArrayList<>();
 
     // Fast tile lookup: (x,y) → Building
     private final HashMap<Long, Building> grid = new HashMap<>();
+
+    private final int width, height;
+
+    public BuildingManager(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
 
     // Packs x,y into a single long key
     private long key(int x, int y) {
@@ -21,6 +28,12 @@ public class BuildingManager {
     }
 
     public boolean canPlace(int x, int y, int w, int h) {
+        // Check if building would be outside world bounds
+        if (x < 0 || y < 0 || x + w > width || y + h > height) {
+            return false;
+        }
+
+        // Check if space is occupied
         for (int ix = x; ix < x + w; ix++) {
             for (int iy = y; iy < y + h; iy++) {
                 if (grid.containsKey(key(ix, iy))) return false;

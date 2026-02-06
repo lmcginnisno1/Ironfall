@@ -1,4 +1,4 @@
-package dev.lmcginninsno1.ironfall;
+package dev.lmcginninsno1.ironfall.game;
 
 public enum GameMode {
     NORMAL,

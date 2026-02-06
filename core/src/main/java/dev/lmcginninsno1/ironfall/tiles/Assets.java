@@ -1,4 +1,4 @@
-package dev.lmcginninsno1.ironfall;
+package dev.lmcginninsno1.ironfall.tiles;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;

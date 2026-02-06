@@ -2,9 +2,10 @@ package dev.lmcginninsno1.ironfall.render;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
-import dev.lmcginninsno1.ironfall.Assets;
+import dev.lmcginninsno1.ironfall.buildings.Conveyor;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
 import dev.lmcginninsno1.ironfall.IronfallGame;
-import dev.lmcginninsno1.ironfall.TileEngine;
+import dev.lmcginninsno1.ironfall.tiles.TileEngine;
 import dev.lmcginninsno1.ironfall.buildings.BuildingManager;
 
 public class WorldRenderer {
@@ -23,6 +24,7 @@ public class WorldRenderer {
         tiles.render(batch);
 
         buildings.render(batch);
+        renderConveyorItems(batch);
 
         if (game.showGrid) {
             drawGrid(batch);
@@ -56,5 +58,39 @@ public class WorldRenderer {
         }
 
         batch.setColor(Color.WHITE);
+    }
+
+    private void renderConveyorItems(SpriteBatch batch) {
+        int w = tiles.getWidth();
+        int h = tiles.getHeight();
+
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+
+                var b = buildings.getAt(x, y);
+                if (!(b instanceof Conveyor c)) continue;
+
+                var item = c.getItem();
+                if (item == null) continue;
+
+                var type = item.type();
+                var sprite = tiles.getRegion(type.row, type.col);
+
+                float px = x * TileEngine.TILE_SIZE;
+                float py = y * TileEngine.TILE_SIZE;
+
+                float p = c.getAnimPhase();
+                float ox = 0f, oy = 0f;
+
+                switch (c.direction) {
+                    case UP -> oy = TileEngine.TILE_SIZE * p;
+                    case DOWN -> oy = -TileEngine.TILE_SIZE * p;
+                    case LEFT -> ox = -TileEngine.TILE_SIZE * p;
+                    case RIGHT -> ox = TileEngine.TILE_SIZE * p;
+                }
+
+                batch.draw(sprite, px + ox, py + oy);
+            }
+        }
     }
 }

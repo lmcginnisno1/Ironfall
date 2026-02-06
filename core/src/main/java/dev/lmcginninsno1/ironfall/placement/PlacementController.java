@@ -6,6 +6,10 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import dev.lmcginninsno1.ironfall.*;
 import dev.lmcginninsno1.ironfall.buildings.*;
+import dev.lmcginninsno1.ironfall.game.GameMode;
+import dev.lmcginninsno1.ironfall.tiles.Assets;
+import dev.lmcginninsno1.ironfall.tiles.TileEngine;
+import dev.lmcginninsno1.ironfall.tiles.TileType;
 
 import java.util.ArrayList;
 
@@ -23,6 +27,9 @@ public class PlacementController {
     private boolean prevLeftDown = false;
     private boolean dragDirectionLocked = false;
     private boolean horizontalFirst = true;
+
+    private ArrayList<Vector2> cachedPath = null;
+    private int cachedEndX = -1, cachedEndY = -1;
 
     public PlacementController(IronfallGame game, TileEngine engine, BuildingManager buildings) {
         this.game = game;
@@ -118,6 +125,9 @@ public class PlacementController {
             dragStartX = tx;
             dragStartY = ty;
             dragDirectionLocked = false;
+            cachedPath = null;
+            cachedEndX = -1;
+            cachedEndY = -1;
         }
 
         if (draggingConveyor && !dragDirectionLocked) {
@@ -130,39 +140,46 @@ public class PlacementController {
             }
         }
 
+        // Update cached path if endpoint changed
+        if (draggingConveyor && dragDirectionLocked && (tx != cachedEndX || ty != cachedEndY)) {
+            cachedPath = conveyorHelper.computePath(dragStartX, dragStartY, tx, ty, horizontalFirst);
+            cachedEndX = tx;
+            cachedEndY = ty;
+        }
+
         if (draggingConveyor && leftJustReleased) {
             draggingConveyor = false;
 
-            ArrayList<Vector2> path =
-                conveyorHelper.computePath(dragStartX, dragStartY, tx, ty, horizontalFirst);
-
-            for (int i = 0; i < path.size(); i++) {
-                Vector2 p = path.get(i);
-                Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(path, i);
-                buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
+            if (cachedPath != null) {
+                // Use the exact cached path from preview
+                for (int i = 0; i < cachedPath.size(); i++) {
+                    Vector2 p = cachedPath.get(i);
+                    Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
+                    buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
+                }
             }
 
+            cachedPath = null;
+            cachedEndX = -1;
+            cachedEndY = -1;
             game.mode = GameMode.NORMAL;
         }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
             draggingConveyor = false;
+            cachedPath = null;
+            cachedEndX = -1;
+            cachedEndY = -1;
             game.mode = GameMode.NORMAL;
         }
     }
 
     private void renderConveyorGhost(SpriteBatch batch) {
-        if (!draggingConveyor) return;
+        if (!draggingConveyor || cachedPath == null) return;
 
-        int tx = game.tileX;
-        int ty = game.tileY;
-
-        ArrayList<Vector2> path =
-            conveyorHelper.computePath(dragStartX, dragStartY, tx, ty, horizontalFirst);
-
-        for (int i = 0; i < path.size(); i++) {
-            Vector2 p = path.get(i);
-            Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(path, i);
+        for (int i = 0; i < cachedPath.size(); i++) {
+            Vector2 p = cachedPath.get(i);
+            Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
 
             batch.setColor(1f, 1f, 1f, 0.5f);
             batch.draw(getConveyorSprite(dir), p.x * 16, p.y * 16, 16, 16);
