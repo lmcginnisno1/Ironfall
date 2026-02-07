@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,5 +31,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: lwjgl3/build/libs/Ironfall-*.jar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
