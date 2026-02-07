@@ -9,6 +9,24 @@ This project was generated with a template including simple application launcher
 - `core`: Main module with the application logic shared by all platforms.
 - `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
 
+## Running the Game
+
+### Download Pre-built JAR
+The easiest way to play Ironfall is to download a pre-built JAR from the [Releases page](https://github.com/lmcgi/Ironfall/releases).
+
+Once downloaded, simply run:
+```bash
+java -jar Ironfall-0.1.0.jar
+```
+
+### Build from Source
+If you prefer to build the game yourself:
+
+```bash
+./gradlew lwjgl3:jar
+java -jar lwjgl3/build/libs/Ironfall-0.1.0.jar
+```
+
 ## Gradle
 
 This project uses [Gradle](https://gradle.org/) to manage dependencies.

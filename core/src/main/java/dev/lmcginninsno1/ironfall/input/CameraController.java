@@ -84,7 +84,7 @@ public class CameraController {
 
         float oldZoom = camera.zoom;
         float newZoom = oldZoom + amountY * zoomSpeed;
-        newZoom = Math.max(0.1f, Math.min(newZoom, 3f));
+        newZoom = Math.max(0.1f, Math.min(newZoom, 1.5f));
 
         zoomTowardCursor(newZoom);
     }
