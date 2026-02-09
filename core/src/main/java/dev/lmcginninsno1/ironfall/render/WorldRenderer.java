@@ -70,26 +70,28 @@ public class WorldRenderer {
                 var b = buildings.getAt(x, y);
                 if (!(b instanceof Conveyor c)) continue;
 
-                var item = c.getItem();
-                if (item == null) continue;
+                var list = c.getItems();
+                if (list == null || list.size == 0) continue;
 
-                var type = item.type();
-                var sprite = tiles.getRegion(type.row, type.col);
+                float baseX = x * TileEngine.TILE_SIZE;
+                float baseY = y * TileEngine.TILE_SIZE;
 
-                float px = x * TileEngine.TILE_SIZE;
-                float py = y * TileEngine.TILE_SIZE;
+                for (var m : list) {
+                    var type = m.item.type();
+                    var sprite = tiles.getRegion(type.row, type.col);
 
-                float p = c.getAnimPhase();
-                float ox = 0f, oy = 0f;
+                    float p = m.progress;
+                    float ox = 0f, oy = 0f;
 
-                switch (c.direction) {
-                    case UP -> oy = TileEngine.TILE_SIZE * p;
-                    case DOWN -> oy = -TileEngine.TILE_SIZE * p;
-                    case LEFT -> ox = -TileEngine.TILE_SIZE * p;
-                    case RIGHT -> ox = TileEngine.TILE_SIZE * p;
+                    switch (c.direction) {
+                        case UP -> oy = TileEngine.TILE_SIZE * p;
+                        case DOWN -> oy = -TileEngine.TILE_SIZE * p;
+                        case LEFT -> ox = -TileEngine.TILE_SIZE * p;
+                        case RIGHT -> ox = TileEngine.TILE_SIZE * p;
+                    }
+
+                    batch.draw(sprite, baseX + ox, baseY + oy);
                 }
-
-                batch.draw(sprite, px + ox, py + oy);
             }
         }
     }

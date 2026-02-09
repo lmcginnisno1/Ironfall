@@ -200,7 +200,7 @@ public class IronfallGame extends ApplicationAdapter {
         screenWidth = width;
         screenHeight = height;
 
-        engine.getCamera().setToOrtho(false, width, height);
+//        engine.getCamera().setToOrtho(false, width, height);
         hudCamera.setToOrtho(false, width, height);
     }
 }
