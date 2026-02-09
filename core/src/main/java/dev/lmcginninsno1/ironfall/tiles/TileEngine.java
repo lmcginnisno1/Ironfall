@@ -114,4 +114,6 @@ public class TileEngine {
     public TextureRegion getRegion(int row, int col) {
         return regions[row][col];
     }
+
+    public boolean inBounds(int x, int y) { return x >= 0 && x < width && y >= 0 && y < height; }
 }

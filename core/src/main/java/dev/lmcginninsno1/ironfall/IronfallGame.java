@@ -17,6 +17,7 @@ import dev.lmcginninsno1.ironfall.placement.*;
 import dev.lmcginninsno1.ironfall.tiles.Assets;
 import dev.lmcginninsno1.ironfall.tiles.TileEngine;
 import dev.lmcginninsno1.ironfall.tiles.TileType;
+import dev.lmcginninsno1.ironfall.worldgen.WorldGenerator;
 
 import static dev.lmcginninsno1.ironfall.render.TextUtil.drawOutlined;
 
@@ -90,21 +91,21 @@ public class IronfallGame extends ApplicationAdapter {
         );
         placementController = new PlacementController(this, engine, buildingManager);
 
-        // Start game by placing core
-        mode = GameMode.PLACING_CORE;
+        // Generate the world and pick the best location for the core
+        WorldGenerator.generate(engine, buildingManager);
 
-        // --- WORLD GENERATION ---
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                double noise = Math.random();
-                engine.setTile(x, y, noise < 0.85 ? TileType.DIRT.id : TileType.SAND.id);
-            }
-        }
+        // start camera centered on wherever the core is placed
+        Core core = buildingManager.getCore();
+        OrthographicCamera cam = engine.getCamera();
 
-        generateVein(engine, TileType.COAL.id, 50, 60);
-        generateVein(engine, TileType.IRON.id, 30, 60);
-        generateVein(engine, TileType.COPPER.id, 50, 60);
-        generateVein(engine, TileType.STONE.id, 100, 100);
+        float cx = (core.x + core.width  / 2f) * TileEngine.TILE_SIZE;
+        float cy = (core.y + core.height / 2f) * TileEngine.TILE_SIZE;
+
+        cam.position.set(cx, cy, 0);
+        cam.update();
+
+        // After worldgen, game starts in normal mode
+        mode = GameMode.NORMAL;
     }
 
     @Override
@@ -113,12 +114,12 @@ public class IronfallGame extends ApplicationAdapter {
 
         float delta = Gdx.graphics.getDeltaTime();
 
-        cameraController.update(delta);   // zoomTowardCursor happens here
+        cameraController.update(delta);
 
         OrthographicCamera cam = engine.getCamera();
         cam.viewportWidth = Gdx.graphics.getWidth();
         cam.viewportHeight = Gdx.graphics.getHeight();
-        cam.update();                     // update AFTER zoomTowardCursor
+        cam.update();
 
         engine.update();
         inputController.update();
@@ -126,7 +127,7 @@ public class IronfallGame extends ApplicationAdapter {
         buildingManager.update(delta);
         placementController.update();
 
-        screenToTile(Gdx.input.getX(), Gdx.input.getY());  // moved AFTER zoom
+        screenToTile(Gdx.input.getX(), Gdx.input.getY());
 
         batch.setProjectionMatrix(engine.getCamera().combined);
         batch.begin();
@@ -170,36 +171,10 @@ public class IronfallGame extends ApplicationAdapter {
         tileY = (int) tilePos.y;
     }
 
-    private void generateVein(TileEngine engine, int tileId, int seedCount, int veinLength) {
-        for (int i = 0; i < seedCount; i++) {
-            int x = (int) (Math.random() * width);
-            int y = (int) (Math.random() * height);
-
-            for (int v = 0; v < veinLength; v++) {
-                TileType t = TileType.fromId(engine.getTile(x, y));
-
-                if (t == TileType.DIRT || t == TileType.SAND)
-                    engine.setTile(x, y, tileId);
-
-                int dir = (int) (Math.random() * 4);
-                switch (dir) {
-                    case 0 -> x++;
-                    case 1 -> x--;
-                    case 2 -> y++;
-                    case 3 -> y--;
-                }
-
-                x = Math.max(0, Math.min(x, width - 1));
-                y = Math.max(0, Math.min(y, height - 1));
-            }
-        }
-    }
-
     @Override
     public void resize(int width, int height) {
         screenWidth = width;
         screenHeight = height;
-
         hudCamera.setToOrtho(false, width, height);
     }
 }
