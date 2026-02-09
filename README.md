@@ -16,7 +16,7 @@ The easiest way to play Ironfall is to download a pre-built JAR from the [Releas
 
 Once downloaded, simply run:
 ```bash
-java -jar Ironfall-0.1.0.jar
+java -jar Ironfall-<version>.jar
 ```
 
 ### Build from Source
@@ -24,7 +24,7 @@ If you prefer to build the game yourself:
 
 ```bash
 ./gradlew lwjgl3:jar
-java -jar lwjgl3/build/libs/Ironfall-0.1.0.jar
+java -jar Ironfall-<version>.jar
 ```
 
 ## Gradle
