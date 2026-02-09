@@ -1,6 +1,7 @@
 package dev.lmcginninsno1.ironfall.buildings;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Array;
 import dev.lmcginninsno1.ironfall.tiles.Assets;
 import dev.lmcginninsno1.ironfall.items.Item;
 
@@ -9,13 +10,20 @@ public class Conveyor extends Building {
     public enum Direction { UP, DOWN, LEFT, RIGHT }
     public final Direction direction;
 
-    private Item item;
+    // Mindustry-style moving item
+    public static class MovingItem {
+        public Item item;
+        public float progress; // 0 → 1
+    }
 
-    // 4 items/sec → 0.25s per move
-    private static final float MOVE_TIME = 0.25f;
-    private float moveCooldown = 0f;
+    // Multiple items per tile
+    private final Array<MovingItem> items = new Array<>();
 
-    // continuous visual animation phase (0→1 looping)
+    // Movement timing
+    private static final float MOVE_TIME = 0.25f; // 4 items/sec
+    private static final float SPACING = 0.33f;   // minimum distance between items
+
+    // Cosmetic belt animation (unchanged)
     private float animPhase = 0f;
 
     public Conveyor(int x, int y, Direction direction) {
@@ -32,56 +40,84 @@ public class Conveyor extends Building {
         };
     }
 
-    public boolean canAcceptItem() {
-        return item == null;
+    // Called by upstream belts
+    public boolean canAcceptAnotherItem() {
+        if (items.size == 0) return true;
+        return items.peek().progress >= SPACING;
     }
 
-    public void acceptItem(Item item) {
-        this.item = item;
+    public void addIncomingItem(Item item) {
+        MovingItem m = new MovingItem();
+        m.item = item;
+        m.progress = 0f;
+        items.add(m);
     }
 
     @Override
     public void update(float delta) {
-        // continuous visual motion
+        // Cosmetic belt animation
         animPhase += delta / MOVE_TIME;
         if (animPhase >= 1f) animPhase -= 1f;
 
-        if (item == null) return;
+        if (items.size == 0) return;
 
-        moveCooldown -= delta;
-        if (moveCooldown > 0f) return;
+        float speed = delta / MOVE_TIME;
 
-        tryMoveForward();
-        moveCooldown = MOVE_TIME;
+        for (int i = 0; i < items.size; i++) {
+            MovingItem m = items.get(i);
+
+            // Enforce spacing behind previous item
+            if (i > 0) {
+                MovingItem prev = items.get(i - 1);
+                float maxProgress = prev.progress - SPACING;
+                if (m.progress > maxProgress) {
+                    m.progress = maxProgress;
+                }
+            }
+
+            m.progress += speed;
+
+            if (m.progress >= 1f) {
+                tryMoveForward(m);
+            }
+        }
     }
 
-    private void tryMoveForward() {
-        int nx = x;
-        int ny = y;
+    private void tryMoveForward(MovingItem m) {
+        int nx = x, ny = y;
 
         switch (direction) {
-            case UP -> ny += 1;
-            case DOWN -> ny -= 1;
-            case LEFT -> nx -= 1;
-            case RIGHT -> nx += 1;
+            case UP -> ny++;
+            case DOWN -> ny--;
+            case LEFT -> nx--;
+            case RIGHT -> nx++;
         }
 
         Building b = world.getAt(nx, ny);
 
-        if (b instanceof Conveyor next && next.canAcceptItem()) {
-            next.acceptItem(item);
-            item = null;
+        // Move to next conveyor
+        if (b instanceof Conveyor next) {
+            if (next.canAcceptAnotherItem()) {
+                next.addIncomingItem(m.item);
+                items.removeValue(m, true);
+                return;
+            }
+        }
+
+        // Move into core
+        if (b instanceof Core core) {
+            core.acceptItem(m.item);
+            items.removeValue(m, true);
             return;
         }
 
-        if (b instanceof Core core) {
-            core.acceptItem(item);
-            item = null;
-        }
+        // Blocked → wait at edge
+        m.progress = 0.99f;
     }
 
-    public Item getItem() {
-        return item;
+    // Used by renderer
+    public Array<MovingItem> getItems() {
+        return items;
     }
 
     public float getAnimPhase() {

@@ -72,8 +72,8 @@ public class BasicMiner extends Building {
             int ty = y + o[1];
 
             Building b = world.getAt(tx, ty);
-            if (b instanceof Conveyor c && c.canAcceptItem()) {
-                c.acceptItem(buffer);
+            if (b instanceof Conveyor c && c.canAcceptAnotherItem()) {
+                c.addIncomingItem(buffer);
                 buffer = null;
                 return;
             }
