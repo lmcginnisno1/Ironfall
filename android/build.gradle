@@ -1,0 +1,79 @@
+apply plugin: 'com.android.application'
+
+android {
+  namespace = "dev.lmcginnisno1.ironfall"
+  compileSdk = 35
+
+  sourceSets {
+    getByName("main") {
+      manifest.srcFile 'AndroidManifest.xml'
+      java.setSrcDirs(['src/main/java'])
+      res.setSrcDirs(['res'])
+      assets.setSrcDirs(['../assets'])
+      jniLibs.setSrcDirs(['libs'])
+    }
+  }
+
+  defaultConfig {
+    applicationId "dev.lmcginnisno1.ironfall"
+    minSdkVersion 21
+    targetSdkVersion 34
+    versionCode 1
+    versionName "1.0"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+    coreLibraryDesugaringEnabled = true
+  }
+}
+
+configurations {
+  natives {
+    canBeResolved = true
+    canBeConsumed = false
+  }
+}
+
+dependencies {
+  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+  implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+  implementation project(':core')
+
+  // Native libraries for Android
+  ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"].each { arch ->
+    natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-$arch"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-$arch"
+  }
+}
+
+tasks.register('copyAndroidNatives') {
+  doFirst {
+    def destBase = file("libs")
+    configurations.natives.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+      def name = artifact.file.name
+      def destDir = null
+      if (name.contains("arm64-v8a")) destDir = file("$destBase/arm64-v8a")
+      else if (name.contains("armeabi-v7a")) destDir = file("$destBase/armeabi-v7a")
+      else if (name.contains("x86_64")) destDir = file("$destBase/x86_64")
+      else if (name.contains("x86")) destDir = file("$destBase/x86")
+
+      if (destDir) {
+        destDir.mkdirs()
+        copy {
+          from zipTree(artifact.file)
+          into destDir
+          include "*.so"
+        }
+      }
+    }
+  }
+}
+
+// Modern, safe hook for native library copying
+tasks.matching { it.name.contains("merge") && it.name.contains("JniLibFolders") }.configureEach { task ->
+  task.dependsOn 'copyAndroidNatives'
+}
+
+eclipse.project.name = appName + "-android"
