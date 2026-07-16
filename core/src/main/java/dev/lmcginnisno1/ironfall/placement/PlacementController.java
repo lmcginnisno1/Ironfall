@@ -32,6 +32,10 @@ public class PlacementController {
     private ArrayList<Vector2> cachedPath = null;
     private int cachedEndX = -1, cachedEndY = -1;
 
+    // Guards against the same mouse-down that selected a sidebar entry
+    // also being read as the start of a drag/placement this same frame.
+    private boolean justSelected = false;
+
     public PlacementController(IronfallGame game, BuildingManager buildings) {
         this.game = game;
         this.buildings = buildings;
@@ -41,6 +45,7 @@ public class PlacementController {
     // Called by sidebar
     public void setPrototype(Building proto) {
         this.prototype = proto;
+        this.justSelected = true;
         game.mode = GameMode.PLACING_GENERIC;
     }
 
@@ -50,6 +55,13 @@ public class PlacementController {
         boolean leftJustPressed = Gdx.input.isButtonJustPressed(Input.Buttons.LEFT);
         boolean leftJustReleased = prevLeftDown && !leftDown;
         prevLeftDown = leftDown;
+
+        if (justSelected) {
+            // Swallow this frame entirely: it's still the same click that
+            // opened the sidebar entry, so it must not also start a drag.
+            justSelected = false;
+            return;
+        }
 
         if (game.mode == GameMode.PLACING_GENERIC) {
             updateGenericPlacement(leftJustPressed, leftJustReleased);
@@ -71,7 +83,7 @@ public class PlacementController {
 
         // Conveyor placement is special
         if (prototype instanceof Conveyor) {
-            updateConveyorPlacement(leftJustReleased);
+            updateConveyorPlacement(leftJustPressed, leftJustReleased);
             return;
         }
 
@@ -127,14 +139,14 @@ public class PlacementController {
         batch.setColor(1f, 1f, 1f, 1f);
     }
 
-    private void updateConveyorPlacement(boolean leftJustReleased) {
+    private void updateConveyorPlacement(boolean leftJustPressed, boolean leftJustReleased) {
         int tx = game.tileX;
         int ty = game.tileY;
 
-        boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
-
-        // Start drag as soon as the user clicks in the world
-        if (!draggingConveyor && leftDown) {
+        // Start drag only on a genuinely fresh press — not just "button
+        // currently held" — so a click-and-hold carried over from selecting
+        // the sidebar entry can't be reused to start a drag at that spot.
+        if (!draggingConveyor && leftJustPressed) {
             draggingConveyor = true;
             dragStartX = tx;
             dragStartY = ty;

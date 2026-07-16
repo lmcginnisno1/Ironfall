@@ -128,9 +128,9 @@ public class OverlayRenderer {
 
     public record UIResult(UIResultType type, BuildCategory category, BuildEntry entry) {
         public static UIResult none() {
-                return new UIResult(UIResultType.NONE, null, null);
-            }
+            return new UIResult(UIResultType.NONE, null, null);
         }
+    }
 
     public UIResult hitTest(int sx, int sy) {
         int panelWidth = 120;
@@ -148,18 +148,22 @@ public class OverlayRenderer {
             if (sy > buttonY - 40 && sy < buttonY) {
                 return new UIResult(UIResultType.CATEGORY_CLICK, cat, null);
             }
-            buttonY -= 80;
-        }
 
-        if (openCategory != null) {
-            int entryY = (int)(hudH - 100);
+            // Entry hit-testing must happen here, using this category's own
+            // buttonY, so it matches wherever drawSidebar actually rendered
+            // this category's dropdown (mirrors drawCategoryContents's startY).
+            if (cat == openCategory) {
+                int entryY = buttonY - 40;
 
-            for (BuildEntry entry : entries.get(openCategory)) {
-                if (sy > entryY - 32 && sy < entryY) {
-                    return new UIResult(UIResultType.ENTRY_CLICK, openCategory, entry);
+                for (BuildEntry entry : entries.get(openCategory)) {
+                    if (sy > entryY - 32 && sy < entryY) {
+                        return new UIResult(UIResultType.ENTRY_CLICK, openCategory, entry);
+                    }
+                    entryY -= 40;
                 }
-                entryY -= 40;
             }
+
+            buttonY -= 80;
         }
 
         return UIResult.none();
