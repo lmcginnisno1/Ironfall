@@ -3,6 +3,7 @@ package dev.lmcginnisno1.ironfall.render;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 
 import dev.lmcginnisno1.ironfall.IronfallGame;
@@ -25,10 +26,30 @@ public class OverlayRenderer {
 
     private final Map<BuildCategory, List<BuildEntry>> entries;
 
-    private int coreMenuX, coreMenuY, coreMenuWidth, coreMenuHeight;
+    // --- Core panel layout constants ---
+    // Rows are always drawn for every ItemType (fixed count, fixed order),
+    // never derived from the inventory HashMap's entrySet(). That keeps the
+    // panel height stable and guarantees draw order and hit-test order can
+    // never disagree about which row belongs to which resource.
+    private static final int PANEL_WIDTH = 260;
+    private static final int ROW_SPACING = 38;
+    private static final int SLIDER_WIDTH = 100;
+    private static final int SLIDER_HEIGHT = 6;
+    private static final int SLIDER_X_OFFSET = 24;   // relative to panel x, matches drawn trackX
+    private static final int TRACK_Y_OFFSET = 24;    // below each row's text baseline
+    private static final int FIRST_ROW_Y_OFFSET = 30; // below panel title baseline
+    private static final int BUTTON_SPACING = 32;
+    private static final int BUTTON_HEIGHT = 26;
+
+    // Panel origin in screen space, recomputed each draw from the Core's
+    // world position. Both drawCoreInventory and hitTest read this same
+    // pair of fields, so they can never disagree about where the panel is.
+    private int panelX, panelY;
+
     private int sellButtonX, sellButtonY, sellButtonW, sellButtonH;
-    private ItemType draggingSliderItem = null;
     private int sellAllButtonX, sellAllButtonY, sellAllButtonW, sellAllButtonH;
+
+    private ItemType draggingSliderItem = null;
 
     public OverlayRenderer(IronfallGame game, SelectionManager selection, BitmapFont font) {
         this.game = game;
@@ -61,56 +82,51 @@ public class OverlayRenderer {
         batch.setProjectionMatrix(game.engine.getCamera().combined);
     }
 
+    // ---------------------------------------------------------------
+    // Core inventory / sell panel
+    // ---------------------------------------------------------------
+
+    /** Slider track rectangle (screen space) for the given item's fixed row. */
+    private Rectangle getSliderRect(ItemType type) {
+        int rowIndex = type.ordinal();
+        int drawY = panelY - FIRST_ROW_Y_OFFSET - rowIndex * ROW_SPACING;
+        int trackY = drawY - TRACK_Y_OFFSET;
+        return new Rectangle(panelX + SLIDER_X_OFFSET, trackY, SLIDER_WIDTH, SLIDER_HEIGHT);
+    }
+
     private void drawCoreInventory(SpriteBatch batch, Core core) {
-        // Locate Core position on screen
         float worldX = (core.x + core.width  / 2f) * TileEngine.TILE_SIZE;
         float worldY = (core.y + core.height / 2f) * TileEngine.TILE_SIZE;
 
         Vector3 screen = game.engine.getCamera().project(new Vector3(worldX, worldY, 0));
 
-        int panelWidth = 260;
-        Map<ItemType, Integer> inv = core.getInventory();
+        panelX = (int) screen.x + 40;
+        panelY = (int) screen.y + 40;
 
-        // Increased vertical space (+115 instead of +80) to accommodate the extra button smoothly!
-        int panelHeight = (inv.size() * 38) + 115;
+        ItemType[] types = ItemType.values();
+        int panelHeight = (types.length * ROW_SPACING) + 115;
 
-        int x = (int)screen.x + 40;
-        int y = (int)screen.y + 40;
+        int panelLeft = panelX - 10;
+        int panelBottom = panelY - panelHeight + 10;
 
-        // Save menu boundaries for mouse hit-testing
-        this.coreMenuX = x - 10;
-        this.coreMenuY = y - panelHeight + 10;
-        this.coreMenuWidth = panelWidth;
-        this.coreMenuHeight = panelHeight;
-
-        // Draw Panel Background
         batch.setColor(0f, 0f, 0f, 0.7f);
-        batch.draw(Assets.whitePixel, coreMenuX, coreMenuY, coreMenuWidth, coreMenuHeight);
+        batch.draw(Assets.whitePixel, panelLeft, panelBottom, PANEL_WIDTH, panelHeight);
         batch.setColor(1f, 1f, 1f, 1.0f);
 
-        // Render Title
-        font.draw(batch, "CORE STORAGE", x, y);
-
-        int drawY = y - 30;
-        int sliderWidth = 100;
-        int sliderHeight = 6;
+        font.draw(batch, "CORE STORAGE", panelX, panelY);
 
         int totalExpectedPayout = 0;
         int totalItemsInCore = 0;
         int totalPossibleEarnings = 0;
+        int lastDrawY = panelY - FIRST_ROW_Y_OFFSET;
 
-        for (var entry : inv.entrySet()) {
-            ItemType type = entry.getKey();
-            int amount = entry.getValue();
+        for (ItemType type : types) {
+            int amount = core.getInventory().getOrDefault(type, 0);
 
-            // Compute "Sell All" stats for the whole inventory
             totalItemsInCore += amount;
             totalPossibleEarnings += (amount * core.getPriceForType(type));
 
-            // Slider specific math
-            int sellAmount = core.getSaleQuantity(type);
-            sellAmount = Math.min(sellAmount, amount);
-
+            int sellAmount = Math.min(core.getSaleQuantity(type), amount);
             int keepAmount = amount - sellAmount;
             int unitPrice = core.getPriceForType(type);
             int expectedPayout = sellAmount * unitPrice;
@@ -118,28 +134,26 @@ public class OverlayRenderer {
 
             float percentage = amount > 0 ? (float) sellAmount / amount : 0f;
 
-            // 1. Draw Item Icon
+            int rowIndex = type.ordinal();
+            int drawY = panelY - FIRST_ROW_Y_OFFSET - rowIndex * ROW_SPACING;
+            lastDrawY = drawY;
+
             TextureRegion icon = game.engine.getRegion(type.row, type.col);
-            batch.draw(icon, x, drawY - 16, 16, 16);
+            batch.draw(icon, panelX, drawY - 16, 16, 16);
 
-            // 2. Display Keep Amount vs. Dragged Sell Amount
             String text = type.name + ": " + keepAmount + " kept";
-            font.draw(batch, text, x + 24, drawY);
+            font.draw(batch, text, panelX + 24, drawY);
 
-            // 3. Draw Slider Track (Grey background bar)
-            int trackX = x + 24;
-            int trackY = drawY - 24;
+            Rectangle track = getSliderRect(type);
             batch.setColor(0.3f, 0.3f, 0.3f, 1f);
-            batch.draw(Assets.whitePixel, trackX, trackY, sliderWidth, sliderHeight);
+            batch.draw(Assets.whitePixel, track.x, track.y, track.width, track.height);
 
-            // 4. Draw Slider Handle (White handle shifted by percentage)
             int handleSize = 10;
-            int handleX = (int) (trackX + (percentage * (sliderWidth - handleSize)));
-            int handleY = trackY - (handleSize / 2) + (sliderHeight / 2);
+            float handleX = track.x + (percentage * (track.width - handleSize));
+            float handleY = track.y - (handleSize / 2f) + (track.height / 2f);
             batch.setColor(1f, 1f, 1f, 1f);
             batch.draw(Assets.whitePixel, handleX, handleY, handleSize, handleSize);
 
-            // 5. Rich Info Row
             String visualFeedback;
             if (sellAmount > 0) {
                 int displayPercent = Math.round(percentage * 100);
@@ -147,41 +161,29 @@ public class OverlayRenderer {
             } else {
                 visualFeedback = "0%";
             }
-            font.draw(batch, visualFeedback, trackX + sliderWidth + 10, trackY + 8);
-
-            drawY -= 38; // Move down for next row
+            font.draw(batch, visualFeedback, track.x + track.width + 10, track.y + 8);
         }
 
         // --- BUTTON 1: CONFIRM TRANSACTION (Slider Selection) ---
-        this.sellButtonX = x + 10;
-        this.sellButtonY = drawY - 20;
-        this.sellButtonW = panelWidth - 40;
-        this.sellButtonH = 26;
+        this.sellButtonX = panelX + 10;
+        this.sellButtonY = lastDrawY - 20 - BUTTON_SPACING; // one row below the last item row
+        this.sellButtonW = PANEL_WIDTH - 40;
+        this.sellButtonH = BUTTON_HEIGHT;
 
-        if (totalExpectedPayout > 0) {
-            batch.setColor(0.1f, 0.7f, 0.3f, 1f); // Active Green
-        } else {
-            batch.setColor(0.4f, 0.4f, 0.4f, 1f); // Disabled Grey
-        }
+        batch.setColor(totalExpectedPayout > 0 ? 0.1f : 0.4f, totalExpectedPayout > 0 ? 0.7f : 0.4f, totalExpectedPayout > 0 ? 0.3f : 0.4f, 1f);
         batch.draw(Assets.whitePixel, sellButtonX, sellButtonY, sellButtonW, sellButtonH);
         batch.setColor(1f, 1f, 1f, 1f);
 
-        String buttonText = totalExpectedPayout > 0
-            ? "SELL SELECTED (" + totalExpectedPayout + "c)"
-            : "SELL SELECTED (0c)";
+        String buttonText = "SELL SELECTED (" + totalExpectedPayout + "c)";
         font.draw(batch, buttonText, sellButtonX + 12, sellButtonY + 18);
 
         // --- BUTTON 2: SELL ALL (100% of Stored Inventory) ---
-        this.sellAllButtonX = x + 10;
-        this.sellAllButtonY = sellButtonY - 32; // Stacked directly below Button 1
-        this.sellAllButtonW = panelWidth - 40;
-        this.sellAllButtonH = 26;
+        this.sellAllButtonX = panelX + 10;
+        this.sellAllButtonY = sellButtonY - BUTTON_SPACING;
+        this.sellAllButtonW = PANEL_WIDTH - 40;
+        this.sellAllButtonH = BUTTON_HEIGHT;
 
-        if (totalItemsInCore > 0) {
-            batch.setColor(0.85f, 0.65f, 0.1f, 1f); // Active Gold
-        } else {
-            batch.setColor(0.4f, 0.4f, 0.4f, 1f); // Disabled Grey
-        }
+        batch.setColor(totalItemsInCore > 0 ? 0.85f : 0.4f, totalItemsInCore > 0 ? 0.65f : 0.4f, totalItemsInCore > 0 ? 0.1f : 0.4f, 1f);
         batch.draw(Assets.whitePixel, sellAllButtonX, sellAllButtonY, sellAllButtonW, sellAllButtonH);
         batch.setColor(1f, 1f, 1f, 1f);
 
@@ -220,19 +222,16 @@ public class OverlayRenderer {
         int counterWidth = 130;
         int counterHeight = 30;
 
-        // Position it nicely in the top-right corner, offsetting from screen edges
         int posX = (int) (hudWidth - counterWidth - 16);
         int posY = (int) (hudHeight - counterHeight - 16);
 
-        // 1. Draw a semi-transparent dark background block (Matches sidebar panel style)
         batch.setColor(0f, 0f, 0f, 0.7f);
         batch.draw(Assets.whitePixel, posX, posY, counterWidth, counterHeight);
-        batch.setColor(1f, 1f, 1f, 1f); // Reset batch color
+        batch.setColor(1f, 1f, 1f, 1f);
 
-        // 2. Draw a bright gold currency text indicator inside the box
-        font.setColor(1f, 0.85f, 0.2f, 1f); // Gold/Yellow color
+        font.setColor(1f, 0.85f, 0.2f, 1f);
         font.draw(batch, "CREDITS: " + game.credits + "c", posX + 12, posY + 20);
-        font.setColor(1f, 1f, 1f, 1f); // Reset font color back to default white
+        font.setColor(1f, 1f, 1f, 1f);
     }
 
     private void drawCategoryContents(SpriteBatch batch, BuildCategory cat, int x, int startY) {
@@ -254,13 +253,12 @@ public class OverlayRenderer {
         CORE_SELL_ALL_CLICK
     }
 
-    // Expanded record to hold custom slider details
     public record UIResult(
         UIResultType type,
         BuildCategory category,
         BuildEntry entry,
-        ItemType sliderItem, // Which item's slider is dragged
-        float sliderValue    // New drag value
+        ItemType sliderItem,
+        float sliderValue
     ) {
         public static UIResult none() {
             return new UIResult(UIResultType.NONE, null, null, null, 0f);
@@ -268,13 +266,10 @@ public class OverlayRenderer {
     }
 
     public UIResult hitTest(int sx, int sy) {
-        // Matches the updated sidebar width
         int sidebarWidth = 120;
 
-        // Convert screen Y → HUD Y (since Gdx is Y-down but rendering is Y-up)
         int hudSy = (int)(game.hudCamera.viewportHeight - sy);
 
-        // 1. Sidebar checks (Your original logic)
         if (sx <= sidebarWidth) {
             float hudH = game.hudCamera.viewportHeight;
             int buttonY = (int)(hudH - 60);
@@ -298,42 +293,33 @@ public class OverlayRenderer {
             return UIResult.none();
         }
 
-        // 2. Core Menu checks
         Building sel = selection.getSelected();
         if (sel instanceof Core core) {
-            int rawMouseY = (int)(game.hudCamera.viewportHeight - sy);
+            int rawMouseY = hudSy;
 
-            // A. Check "SELL SELECTED" (Confirm Transaction) Button
             if (sx >= sellButtonX && sx <= sellButtonX + sellButtonW &&
                 rawMouseY >= sellButtonY && rawMouseY <= sellButtonY + sellButtonH) {
                 return new UIResult(UIResultType.CORE_SELL_CLICK, null, null, null, 0f);
             }
 
-            // B. Check "SELL ALL" Button
             if (sx >= sellAllButtonX && sx <= sellAllButtonX + sellAllButtonW &&
                 rawMouseY >= sellAllButtonY && rawMouseY <= sellAllButtonY + sellAllButtonH) {
                 return new UIResult(UIResultType.CORE_SELL_ALL_CLICK, null, null, null, 0f);
             }
 
-            // C. Check if starting a drag on any item slider
-            int sliderXStart = coreMenuX + 24; // Matches rendering trackX
-            int sliderWidth = 100;
+            for (ItemType type : ItemType.values()) {
+                Rectangle track = getSliderRect(type);
 
-            int checkY = coreMenuY + coreMenuHeight - 40; // Starts from top down
-            for (var entry : core.getInventory().entrySet()) {
-                ItemType type = entry.getKey();
+                // Slightly generous vertical hitbox around the thin visual track.
+                float hitTop = track.y + track.height + 8;
+                float hitBottom = track.y - 8;
 
-                // Define bounding box for slider track row
-                int sliderYBottom = checkY - 28;
-                int sliderYTop = checkY - 14;
+                if (sx >= track.x && sx <= track.x + track.width &&
+                    rawMouseY >= hitBottom && rawMouseY <= hitTop) {
 
-                if (sx >= sliderXStart && sx <= sliderXStart + sliderWidth &&
-                    rawMouseY >= sliderYBottom && rawMouseY <= sliderYTop) {
-
-                    float relativeX = (float)(sx - sliderXStart) / sliderWidth;
+                    float relativeX = (sx - track.x) / track.width;
                     return new UIResult(UIResultType.CORE_SLIDER_DRAG, null, null, type, relativeX);
                 }
-                checkY -= 38;
             }
         }
 
@@ -352,7 +338,6 @@ public class OverlayRenderer {
             case CORE_SLIDER_DRAG -> {
                 Building sel = selection.getSelected();
                 if (sel instanceof Core core) {
-                    // Set both the active drag item and value
                     draggingSliderItem = result.sliderItem;
                     core.setSalePercentage(result.sliderItem, result.sliderValue);
                 }
@@ -362,7 +347,6 @@ public class OverlayRenderer {
                 if (sel instanceof Core core) {
                     int payout = core.sellSelectedItems();
                     if (payout > 0) {
-                        // Deposit the money directly into your main game wallet!
                         game.credits += payout;
                         System.out.println("Sold materials! Added " + payout + "c. Wallet: " + game.credits + "c");
                     }
@@ -381,14 +365,12 @@ public class OverlayRenderer {
         }
     }
 
-    // Helper method to update a slider value when mouse is held down
     public void updateActiveDrag(int sx) {
         if (draggingSliderItem == null) return;
         Building sel = selection.getSelected();
         if (sel instanceof Core core) {
-            int sliderXStart = coreMenuX + 24;
-            int sliderWidth = 100;
-            float relativeX = (float)(sx - sliderXStart) / sliderWidth;
+            Rectangle track = getSliderRect(draggingSliderItem);
+            float relativeX = (sx - track.x) / track.width;
             core.setSalePercentage(draggingSliderItem, relativeX);
         }
     }

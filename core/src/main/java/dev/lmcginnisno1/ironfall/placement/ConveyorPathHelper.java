@@ -60,6 +60,13 @@ public class ConveyorPathHelper {
 
     private Building getAdjacentBuilding(int tx, int ty) {
         for (Building b : buildings.getBuildings()) {
+            // Only orient into genuine destinations (e.g. the Core). A belt's
+            // own earlier segments are already placed by the time we reach
+            // the last tile, so without this check a belt dropped short of
+            // the Core would detect its own previous tile as a "target" and
+            // point backward into itself instead of just continuing straight.
+            if (b instanceof Conveyor) continue;
+
             if (tx == b.x - 1 && ty >= b.y && ty < b.y + b.height) return b;
             if (tx == b.x + b.width && ty >= b.y && ty < b.y + b.height) return b;
             if (ty == b.y - 1 && tx >= b.x && tx < b.x + b.width) return b;

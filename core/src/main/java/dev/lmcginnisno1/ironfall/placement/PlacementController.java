@@ -99,8 +99,9 @@ public class PlacementController {
 
         if (leftJustPressed && valid) {
             buildings.place(prototype.copyAt(px, py));
-            prototype = null;
-            game.mode = GameMode.NORMAL;
+            // Deliberately not resetting prototype/mode here: staying in
+            // PLACING_GENERIC lets the player place another one immediately.
+            // Right-click (below) is the way to exit placement mode.
         }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
@@ -186,8 +187,9 @@ public class PlacementController {
             cachedPath = null;
             cachedEndX = -1;
             cachedEndY = -1;
-            prototype = null;
-            game.mode = GameMode.NORMAL;
+            // Deliberately not resetting prototype/mode here: staying in
+            // PLACING_GENERIC lets the player start another belt drag right
+            // away. Right-click (below) is the way to exit placement mode.
         }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
@@ -201,7 +203,20 @@ public class PlacementController {
     }
 
     private void renderConveyorGhost(SpriteBatch batch) {
-        if (!draggingConveyor || cachedPath == null) return;
+        if (!draggingConveyor) {
+            // No drag in progress yet — still show a preview tile at the
+            // cursor so it's clear a conveyor is armed and ready to place,
+            // same as every other placeable building already does.
+            int tx = game.tileX;
+            int ty = game.tileY;
+
+            batch.setColor(1f, 1f, 1f, 0.5f);
+            batch.draw(getConveyorSprite(Conveyor.Direction.RIGHT), tx * 16, ty * 16, 16, 16);
+            batch.setColor(1f, 1f, 1f, 1f);
+            return;
+        }
+
+        if (cachedPath == null) return;
 
         for (int i = 0; i < cachedPath.size(); i++) {
             Vector2 p = cachedPath.get(i);
