@@ -19,8 +19,10 @@ public class BasicMiner extends Building {
 
     private final TileEngine engine;
 
+    public static final int COST = 50;
+
     public BasicMiner(int x, int y, TileEngine engine) {
-        super(x, y, 2, 2, Assets.basicMiner);
+        super(x, y, 2, 2, Assets.basicMiner, COST);
         this.engine = engine;
 
         int foundOreId = -1;
@@ -53,10 +55,11 @@ public class BasicMiner extends Building {
             if (buffer != null) return;
         }
 
-        // Produce based on rate
+        // Produce based on rate, scaled by the current miner speed upgrade level
+        float effectiveRate = rate * world.getUpgrades().minerSpeedMultiplier();
         timer += delta;
-        if (timer >= 1f / rate) {
-            timer -= 1f / rate;
+        if (timer >= 1f / effectiveRate) {
+            timer -= 1f / effectiveRate;
             buffer = new Item(ItemType.oreTypeFromId(oreId));
         }
     }
@@ -79,8 +82,20 @@ public class BasicMiner extends Building {
             int ty = y + o[1];
 
             Building b = world.getAt(tx, ty);
+
             if (b instanceof Conveyor c && c.canAcceptAnotherItem()) {
                 c.addIncomingItem(buffer);
+                buffer = null;
+                return;
+            }
+
+            // Also allow feeding straight into an adjacent Core, no belt
+            // required — mirrors how WorldGenerator already favors placing
+            // the Core near ore, so touching placements should just work.
+            // If the Core is at its storage cap for this resource, acceptItem
+            // returns false and the miner simply stays full (backpressure),
+            // same as when an adjacent conveyor is jammed.
+            if (b instanceof Core core && core.acceptItem(buffer)) {
                 buffer = null;
                 return;
             }

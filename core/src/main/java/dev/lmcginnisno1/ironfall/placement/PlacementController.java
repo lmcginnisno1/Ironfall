@@ -91,6 +91,8 @@ public class PlacementController {
         int py = game.tileY - prototype.height / 2;
 
         boolean valid = buildings.canPlace(px, py, prototype.width, prototype.height);
+        boolean canAfford = game.credits >= prototype.cost;
+        valid &= canAfford;
 
         // Miner-specific validation
         if (prototype instanceof BasicMiner) {
@@ -98,6 +100,7 @@ public class PlacementController {
         }
 
         if (leftJustPressed && valid) {
+            game.credits -= prototype.cost;
             buildings.place(prototype.copyAt(px, py));
             // Deliberately not resetting prototype/mode here: staying in
             // PLACING_GENERIC lets the player place another one immediately.
@@ -123,6 +126,7 @@ public class PlacementController {
         int py = game.tileY - prototype.height / 2;
 
         boolean valid = buildings.canPlace(px, py, prototype.width, prototype.height);
+        valid &= game.credits >= prototype.cost;
 
         // Miner-specific validation
         if (prototype instanceof BasicMiner) {
@@ -177,11 +181,19 @@ public class PlacementController {
             draggingConveyor = false;
 
             if (cachedPath != null) {
-                for (int i = 0; i < cachedPath.size(); i++) {
-                    Vector2 p = cachedPath.get(i);
-                    Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
-                    buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
+                int totalCost = cachedPath.size() * Conveyor.COST;
+
+                if (game.credits >= totalCost) {
+                    game.credits -= totalCost;
+
+                    for (int i = 0; i < cachedPath.size(); i++) {
+                        Vector2 p = cachedPath.get(i);
+                        Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
+                        buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
+                    }
                 }
+                // Can't afford the full run: place nothing, rather than
+                // leaving a partial belt that doesn't reach where intended.
             }
 
             cachedPath = null;
@@ -218,11 +230,13 @@ public class PlacementController {
 
         if (cachedPath == null) return;
 
+        boolean canAfford = game.credits >= cachedPath.size() * Conveyor.COST;
+
         for (int i = 0; i < cachedPath.size(); i++) {
             Vector2 p = cachedPath.get(i);
             Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
 
-            batch.setColor(1f, 1f, 1f, 0.5f);
+            batch.setColor(canAfford ? 1f : 1f, canAfford ? 1f : 0.3f, canAfford ? 1f : 0.3f, 0.5f);
             batch.draw(getConveyorSprite(dir), p.x * 16, p.y * 16, 16, 16);
         }
 

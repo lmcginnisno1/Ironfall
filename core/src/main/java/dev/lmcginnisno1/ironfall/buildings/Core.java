@@ -15,13 +15,19 @@ public class Core extends Building {
     private final Map<ItemType, Integer> saleQuantities = new HashMap<>();
 
     public Core(int x, int y) {
-        super(x, y, 4, 4, Assets.core);
+        super(x, y, 4, 4, Assets.core, 0);
     }
 
-    public void acceptItem(Item item) {
+    /** Returns false (accepting nothing) if this resource is already at its storage cap. */
+    public boolean acceptItem(Item item) {
         ItemType type = item.type();
-        inventory.put(type, inventory.getOrDefault(type, 0) + 1);
-        // Note: As items flow in, saleQuantities.get(type) remains unchanged!
+        int cap = world.getUpgrades().storageCap();
+        int have = inventory.getOrDefault(type, 0);
+
+        if (have >= cap) return false;
+
+        inventory.put(type, have + 1);
+        return true;
     }
 
     @Override
@@ -31,6 +37,14 @@ public class Core extends Building {
 
     public Map<ItemType, Integer> getInventory() {
         return inventory;
+    }
+
+    /** Spends stored resources (e.g. to fund an upgrade). Returns false, spending nothing, if insufficient. */
+    public boolean trySpendResource(ItemType type, int amount) {
+        int have = inventory.getOrDefault(type, 0);
+        if (have < amount) return false;
+        inventory.put(type, have - amount);
+        return true;
     }
 
     // --- ECONOMIC SYSTEM WITH LOCKED QUANTITIES ---

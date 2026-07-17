@@ -47,7 +47,12 @@ public class SelectionManager {
 
     public void deleteSelected() {
         if (selected != null) {
-            buildings.remove(selected);
+            if (buildings.remove(selected)) {
+                // Full credit refund, no resources returned, per design —
+                // this exists purely so a bad placement can't strand
+                // credits/resources permanently, not as an economy lever.
+                game.credits += selected.cost;
+            }
             selected = null;
         }
     }
@@ -90,7 +95,9 @@ public class SelectionManager {
 
     public void deleteMulti() {
         for (Building b : multi) {
-            buildings.remove(b);
+            if (buildings.remove(b)) {
+                game.credits += b.cost;
+            }
         }
         multi.clear();
     }

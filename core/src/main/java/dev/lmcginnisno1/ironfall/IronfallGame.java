@@ -29,7 +29,7 @@ public class IronfallGame extends ApplicationAdapter {
 
     // World
     public TileEngine engine;
-    private BuildingManager buildingManager;
+    public BuildingManager buildingManager;
 
     // Cameras
     public OrthographicCamera hudCamera;
@@ -58,7 +58,9 @@ public class IronfallGame extends ApplicationAdapter {
     // Debug
     public boolean showGrid = false;
 
-    public int credits = 0;
+    // Enough for one Basic Miner ($50) plus a short belt run to the Core,
+    // so a fresh save isn't a softlock before you've sold anything.
+    public int credits = 100;
 
     @Override
     public void create() {
@@ -144,18 +146,6 @@ public class IronfallGame extends ApplicationAdapter {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
         overlayRenderer.render(batch);
-
-        if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height) {
-            TileType t = TileType.fromId(engine.getTile(tileX, tileY));
-            drawOutlined(
-                font,
-                batch,
-                t.name + " (" + tileX + ", " + tileY + ")",
-                Gdx.input.getX() + 16,
-                screenHeight - Gdx.input.getY() + 16
-            );
-        }
-
         batch.end();
     }
 

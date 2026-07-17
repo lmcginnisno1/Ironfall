@@ -26,9 +26,11 @@ public class Conveyor extends Building {
     // Cosmetic belt animation (unchanged)
     private float animPhase = 0f;
 
+    public static final int COST = 5;
+
     public
     Conveyor(int x, int y, Direction direction) {
-        super(x, y, 1, 1, getSpriteFor(direction));
+        super(x, y, 1, 1, getSpriteFor(direction), COST);
         this.direction = direction;
     }
 
@@ -62,7 +64,7 @@ public class Conveyor extends Building {
 
         if (items.size == 0) return;
 
-        float speed = delta / MOVE_TIME;
+        float speed = (delta / MOVE_TIME) * world.getUpgrades().beltSpeedMultiplier();
 
         for (int i = 0; i < items.size; i++) {
             MovingItem m = items.get(i);
@@ -105,11 +107,13 @@ public class Conveyor extends Building {
             }
         }
 
-        // Move into core
+        // Move into core (unless it's at its storage cap for this resource,
+        // in which case fall through to the "blocked" case below)
         if (b instanceof Core core) {
-            core.acceptItem(m.item);
-            items.removeValue(m, true);
-            return;
+            if (core.acceptItem(m.item)) {
+                items.removeValue(m, true);
+                return;
+            }
         }
 
         // Blocked → wait at edge

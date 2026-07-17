@@ -11,15 +11,21 @@ public abstract class Building {
     public final int width;  // footprint in tiles
     public final int height;
 
+    // Credit cost to place one instance of this building (per-tile for
+    // Conveyor, since it's placed in multi-tile drags). Used both to charge
+    // on placement and to determine the refund when it's deleted.
+    public final int cost;
+
     protected TextureRegion sprite;
     protected BuildingManager world;
 
-    public Building(int x, int y, int width, int height, TextureRegion sprite) {
+    public Building(int x, int y, int width, int height, TextureRegion sprite, int cost) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.sprite = sprite;
+        this.cost = cost;
     }
 
     public void update(float delta) {}

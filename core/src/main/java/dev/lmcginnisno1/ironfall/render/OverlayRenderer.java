@@ -8,10 +8,12 @@ import com.badlogic.gdx.math.Vector3;
 
 import dev.lmcginnisno1.ironfall.IronfallGame;
 import dev.lmcginnisno1.ironfall.buildings.*;
+import dev.lmcginnisno1.ironfall.game.Upgrades;
 import dev.lmcginnisno1.ironfall.items.ItemType;
 import dev.lmcginnisno1.ironfall.selection.SelectionManager;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.tiles.TileEngine;
+import dev.lmcginnisno1.ironfall.tiles.TileType;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,9 @@ public class OverlayRenderer {
 
     private int sellButtonX, sellButtonY, sellButtonW, sellButtonH;
     private int sellAllButtonX, sellAllButtonY, sellAllButtonW, sellAllButtonH;
+    private int minerUpgradeButtonX, minerUpgradeButtonY, minerUpgradeButtonW, minerUpgradeButtonH;
+    private int beltUpgradeButtonX, beltUpgradeButtonY, beltUpgradeButtonW, beltUpgradeButtonH;
+    private int storageUpgradeButtonX, storageUpgradeButtonY, storageUpgradeButtonW, storageUpgradeButtonH;
 
     private ItemType draggingSliderItem = null;
 
@@ -58,10 +63,10 @@ public class OverlayRenderer {
 
         this.entries = Map.of(
             BuildCategory.MINING, List.of(
-                new BuildEntry("Basic Miner", Assets.basicMiner, () -> new BasicMiner(0,0, game.engine))
+                new BuildEntry("Basic Miner", Assets.basicMiner, BasicMiner.COST, () -> new BasicMiner(0,0, game.engine))
             ),
             BuildCategory.TRANSPORT, List.of(
-                new BuildEntry("Conveyor", Assets.conveyorUp, () -> new Conveyor(0,0, Conveyor.Direction.UP))
+                new BuildEntry("Conveyor", Assets.conveyorUp, Conveyor.COST, () -> new Conveyor(0,0, Conveyor.Direction.UP))
             )
         );
     }
@@ -78,6 +83,36 @@ public class OverlayRenderer {
         }
 
         drawHUD(batch);
+
+        // --- FIXED CURSOR COORDINATES TEXT WITH ORIGINAL OUTLINED STYLE ---
+        // 1. Grab raw mouse position directly from LibGDX input
+        int screenX = com.badlogic.gdx.Gdx.input.getX();
+        int screenY = com.badlogic.gdx.Gdx.input.getY();
+
+        // 2. Leverage TileEngine's camera unprojection to get the exact map grid index
+        com.badlogic.gdx.math.Vector2 tileCoords = game.engine.screenToWorld(screenX, screenY);
+        int tileX = (int) tileCoords.x;
+        int tileY = (int) tileCoords.y;
+
+        // 3. Render only if the cursor sits within the bounds of the active map grid
+        if (tileX >= 0 && tileX < game.engine.getWidth() && tileY >= 0 && tileY < game.engine.getHeight()) {
+            TileType t = TileType.fromId(game.engine.getTile(tileX, tileY));
+
+            // 4. Calculate coordinates tracking the actual window resolution dimensions
+            float mouseX = screenX + 16;
+            float mouseY = com.badlogic.gdx.Gdx.graphics.getHeight() - screenY + 16;
+
+            // 5. Render using your high-visibility UI text style via TextUtil
+            font.setColor(1f, 0.85f, 0.2f, 0.8f);
+            TextUtil.drawOutlined(
+                font,
+                batch,
+                t.name + " (" + tileX + ", " + tileY + ")",
+                mouseX,
+                mouseY
+            );
+            font.setColor(1f, 1f, 1f, 1f); // Reset font color back to standard white
+        }
 
         batch.setProjectionMatrix(game.engine.getCamera().combined);
     }
@@ -104,7 +139,7 @@ public class OverlayRenderer {
         panelY = (int) screen.y + 40;
 
         ItemType[] types = ItemType.values();
-        int panelHeight = (types.length * ROW_SPACING) + 115;
+        int panelHeight = (types.length * ROW_SPACING) + 115 + 3 * BUTTON_SPACING;
 
         int panelLeft = panelX - 10;
         int panelBottom = panelY - panelHeight + 10;
@@ -119,6 +154,9 @@ public class OverlayRenderer {
         int totalItemsInCore = 0;
         int totalPossibleEarnings = 0;
         int lastDrawY = panelY - FIRST_ROW_Y_OFFSET;
+
+        Upgrades upgrades = game.buildingManager.getUpgrades();
+        int storageCap = upgrades.storageCap();
 
         for (ItemType type : types) {
             int amount = core.getInventory().getOrDefault(type, 0);
@@ -141,8 +179,11 @@ public class OverlayRenderer {
             TextureRegion icon = game.engine.getRegion(type.row, type.col);
             batch.draw(icon, panelX, drawY - 16, 16, 16);
 
-            String text = type.name + ": " + keepAmount + " kept";
+            boolean atCap = amount >= storageCap;
+            if (atCap) font.setColor(1f, 0.5f, 0.4f, 1f);
+            String text = type.name + ": " + amount + "/" + storageCap + (atCap ? " (FULL)" : "") + "  [" + keepAmount + " kept]";
             font.draw(batch, text, panelX + 24, drawY);
+            if (atCap) font.setColor(1f, 1f, 1f, 1f);
 
             Rectangle track = getSliderRect(type);
             batch.setColor(0.3f, 0.3f, 0.3f, 1f);
@@ -191,6 +232,67 @@ public class OverlayRenderer {
             ? "SELL ALL " + totalItemsInCore + " (+" + totalPossibleEarnings + "c)"
             : "SELL ALL (EMPTY)";
         font.draw(batch, sellAllText, sellAllButtonX + 12, sellAllButtonY + 18);
+
+        // --- UPGRADES (paid for in stored resources, not credits) ---
+        this.minerUpgradeButtonX = panelX + 10;
+        this.minerUpgradeButtonY = sellAllButtonY - BUTTON_SPACING;
+        this.minerUpgradeButtonW = PANEL_WIDTH - 40;
+        this.minerUpgradeButtonH = BUTTON_HEIGHT;
+
+        drawUpgradeButton(
+            batch, core, upgrades,
+            minerUpgradeButtonX, minerUpgradeButtonY, minerUpgradeButtonW, minerUpgradeButtonH,
+            "MINER SPEED", upgrades.minerSpeedLevel, upgrades.isMinerMaxed(),
+            upgrades.minerUpgradeResource(), upgrades.minerUpgradeCost()
+        );
+
+        this.beltUpgradeButtonX = panelX + 10;
+        this.beltUpgradeButtonY = minerUpgradeButtonY - BUTTON_SPACING;
+        this.beltUpgradeButtonW = PANEL_WIDTH - 40;
+        this.beltUpgradeButtonH = BUTTON_HEIGHT;
+
+        drawUpgradeButton(
+            batch, core, upgrades,
+            beltUpgradeButtonX, beltUpgradeButtonY, beltUpgradeButtonW, beltUpgradeButtonH,
+            "BELT SPEED", upgrades.beltSpeedLevel, upgrades.isBeltMaxed(),
+            upgrades.beltUpgradeResource(), upgrades.beltUpgradeCost()
+        );
+
+        this.storageUpgradeButtonX = panelX + 10;
+        this.storageUpgradeButtonY = beltUpgradeButtonY - BUTTON_SPACING;
+        this.storageUpgradeButtonW = PANEL_WIDTH - 40;
+        this.storageUpgradeButtonH = BUTTON_HEIGHT;
+
+        drawUpgradeButton(
+            batch, core, upgrades,
+            storageUpgradeButtonX, storageUpgradeButtonY, storageUpgradeButtonW, storageUpgradeButtonH,
+            "STORAGE CAP", upgrades.storageCapacityLevel, upgrades.isStorageMaxed(),
+            upgrades.storageUpgradeResource(), upgrades.storageUpgradeCost()
+        );
+    }
+
+    private void drawUpgradeButton(
+        SpriteBatch batch, Core core, Upgrades upgrades,
+        int bx, int by, int bw, int bh,
+        String label, int level, boolean maxed, ItemType resource, int cost
+    ) {
+        int have = core.getInventory().getOrDefault(resource, 0);
+        boolean canAfford = !maxed && have >= cost;
+
+        if (maxed) {
+            batch.setColor(0.5f, 0.4f, 0.7f, 1f);
+        } else if (canAfford) {
+            batch.setColor(0.2f, 0.5f, 0.8f, 1f);
+        } else {
+            batch.setColor(0.4f, 0.4f, 0.4f, 1f);
+        }
+        batch.draw(Assets.whitePixel, bx, by, bw, bh);
+        batch.setColor(1f, 1f, 1f, 1f);
+
+        String text = maxed
+            ? label + " (MAX Lv." + level + ")"
+            : label + " Lv." + level + " -> " + (level + 1) + "  (" + cost + " " + resource.name + ")";
+        font.draw(batch, text, bx + 12, by + 18);
     }
 
     private void drawSidebar(SpriteBatch batch) {
@@ -237,9 +339,11 @@ public class OverlayRenderer {
     private void drawCategoryContents(SpriteBatch batch, BuildCategory cat, int x, int startY) {
         int y = startY;
 
+        String costSuffix = (cat == BuildCategory.TRANSPORT) ? "/tile" : "";
+
         for (BuildEntry entry : entries.get(cat)) {
             batch.draw(entry.icon, x, y - 32, 32, 32);
-            font.draw(batch, entry.name, x + 40, y - 8);
+            font.draw(batch, entry.name + " ($" + entry.cost + costSuffix + ")", x + 40, y - 8);
             y -= 40;
         }
     }
@@ -250,7 +354,10 @@ public class OverlayRenderer {
         ENTRY_CLICK,
         CORE_SLIDER_DRAG,
         CORE_SELL_CLICK,
-        CORE_SELL_ALL_CLICK
+        CORE_SELL_ALL_CLICK,
+        CORE_UPGRADE_MINER_CLICK,
+        CORE_UPGRADE_BELT_CLICK,
+        CORE_UPGRADE_STORAGE_CLICK
     }
 
     public record UIResult(
@@ -307,6 +414,21 @@ public class OverlayRenderer {
                 return new UIResult(UIResultType.CORE_SELL_ALL_CLICK, null, null, null, 0f);
             }
 
+            if (sx >= minerUpgradeButtonX && sx <= minerUpgradeButtonX + minerUpgradeButtonW &&
+                rawMouseY >= minerUpgradeButtonY && rawMouseY <= minerUpgradeButtonY + minerUpgradeButtonH) {
+                return new UIResult(UIResultType.CORE_UPGRADE_MINER_CLICK, null, null, null, 0f);
+            }
+
+            if (sx >= beltUpgradeButtonX && sx <= beltUpgradeButtonX + beltUpgradeButtonW &&
+                rawMouseY >= beltUpgradeButtonY && rawMouseY <= beltUpgradeButtonY + beltUpgradeButtonH) {
+                return new UIResult(UIResultType.CORE_UPGRADE_BELT_CLICK, null, null, null, 0f);
+            }
+
+            if (sx >= storageUpgradeButtonX && sx <= storageUpgradeButtonX + storageUpgradeButtonW &&
+                rawMouseY >= storageUpgradeButtonY && rawMouseY <= storageUpgradeButtonY + storageUpgradeButtonH) {
+                return new UIResult(UIResultType.CORE_UPGRADE_STORAGE_CLICK, null, null, null, 0f);
+            }
+
             for (ItemType type : ItemType.values()) {
                 Rectangle track = getSliderRect(type);
 
@@ -359,6 +481,42 @@ public class OverlayRenderer {
                     if (payout > 0) {
                         game.credits += payout;
                         System.out.println("Sold ALL stored materials! Added " + payout + "c. Wallet: " + game.credits + "c");
+                    }
+                }
+            }
+            case CORE_UPGRADE_MINER_CLICK -> {
+                Building sel = selection.getSelected();
+                if (sel instanceof Core core) {
+                    Upgrades upgrades = game.buildingManager.getUpgrades();
+                    if (!upgrades.isMinerMaxed()) {
+                        int cost = upgrades.minerUpgradeCost();
+                        if (core.trySpendResource(upgrades.minerUpgradeResource(), cost)) {
+                            upgrades.minerSpeedLevel++;
+                        }
+                    }
+                }
+            }
+            case CORE_UPGRADE_BELT_CLICK -> {
+                Building sel = selection.getSelected();
+                if (sel instanceof Core core) {
+                    Upgrades upgrades = game.buildingManager.getUpgrades();
+                    if (!upgrades.isBeltMaxed()) {
+                        int cost = upgrades.beltUpgradeCost();
+                        if (core.trySpendResource(upgrades.beltUpgradeResource(), cost)) {
+                            upgrades.beltSpeedLevel++;
+                        }
+                    }
+                }
+            }
+            case CORE_UPGRADE_STORAGE_CLICK -> {
+                Building sel = selection.getSelected();
+                if (sel instanceof Core core) {
+                    Upgrades upgrades = game.buildingManager.getUpgrades();
+                    if (!upgrades.isStorageMaxed()) {
+                        int cost = upgrades.storageUpgradeCost();
+                        if (core.trySpendResource(upgrades.storageUpgradeResource(), cost)) {
+                            upgrades.storageCapacityLevel++;
+                        }
                     }
                 }
             }

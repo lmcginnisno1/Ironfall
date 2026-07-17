@@ -4,6 +4,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 
+import dev.lmcginnisno1.ironfall.game.Upgrades;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -11,6 +13,8 @@ public class BuildingManager {
 
     private final ArrayList<Building> buildings = new ArrayList<>();
     private final HashMap<Long, Building> grid = new HashMap<>();
+
+    private final Upgrades upgrades = new Upgrades();
 
     private final int width, height;
 
@@ -44,6 +48,10 @@ public class BuildingManager {
         register(core);
     }
 
+    public Upgrades getUpgrades() {
+        return upgrades;
+    }
+
     public Core getCore(){
         for (Building b : getBuildings()) {
             if (b instanceof Core core) {
@@ -69,8 +77,8 @@ public class BuildingManager {
         return grid.get(key(x, y));
     }
 
-    public void remove(Building b) {
-        if (b instanceof Core) return;
+    public boolean remove(Building b) {
+        if (b instanceof Core) return false;
 
         buildings.remove(b);
 
@@ -79,6 +87,8 @@ public class BuildingManager {
                 grid.remove(key(ix, iy));
             }
         }
+
+        return true;
     }
 
     public void update(float delta) {
