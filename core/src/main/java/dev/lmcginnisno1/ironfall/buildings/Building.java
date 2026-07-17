@@ -31,4 +31,10 @@ public abstract class Building {
     public void setWorld(BuildingManager world) {
         this.world = world;
     }
+
+    public TextureRegion getSprite() {
+        return sprite;
+    }
+
+    public abstract Building copyAt(int x, int y);
 }

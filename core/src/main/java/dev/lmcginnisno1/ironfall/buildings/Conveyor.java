@@ -26,7 +26,8 @@ public class Conveyor extends Building {
     // Cosmetic belt animation (unchanged)
     private float animPhase = 0f;
 
-    public Conveyor(int x, int y, Direction direction) {
+    public
+    Conveyor(int x, int y, Direction direction) {
         super(x, y, 1, 1, getSpriteFor(direction));
         this.direction = direction;
     }
@@ -120,7 +121,9 @@ public class Conveyor extends Building {
         return items;
     }
 
-    public float getAnimPhase() {
-        return animPhase;
+    @Override
+    public Building copyAt(int x, int y) {
+        return new Conveyor(x, y, this.direction);
     }
+
 }

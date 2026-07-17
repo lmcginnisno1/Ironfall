@@ -17,8 +17,11 @@ public class BasicMiner extends Building {
     // 0.25 ore/sec per ore tile
     private final float rate;
 
+    private final TileEngine engine;
+
     public BasicMiner(int x, int y, TileEngine engine) {
         super(x, y, 2, 2, Assets.basicMiner);
+        this.engine = engine;
 
         int foundOreId = -1;
         int count = 0;
@@ -59,12 +62,16 @@ public class BasicMiner extends Building {
     }
 
     private void tryOutput() {
-        // Four tiles directly touching the miner's 2×2 footprint
+        // For a 2×2 building, each side has two adjacent tiles
         int[][] offsets = {
-            { -1,  0 }, // left side, middle
-            {  2,  0 }, // right side, middle
-            {  0, -1 }, // bottom, middle
-            {  0,  2 }  // top, middle
+            // left side
+            { -1, 0 }, { -1, 1 },
+            // right side
+            {  2, 0 }, {  2, 1 },
+            // bottom side
+            { 0, -1 }, { 1, -1 },
+            // top side
+            { 0,  2 }, { 1,  2 }
         };
 
         for (int[] o : offsets) {
@@ -78,5 +85,10 @@ public class BasicMiner extends Building {
                 return;
             }
         }
+    }
+
+    @Override
+    public Building copyAt(int x, int y) {
+        return new BasicMiner(x, y, engine);
     }
 }

@@ -3,12 +3,13 @@ package dev.lmcginnisno1.ironfall.placement;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import dev.lmcginnisno1.ironfall.*;
+
+import dev.lmcginnisno1.ironfall.IronfallGame;
 import dev.lmcginnisno1.ironfall.buildings.*;
 import dev.lmcginnisno1.ironfall.game.GameMode;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
-import dev.lmcginnisno1.ironfall.tiles.TileEngine;
 import dev.lmcginnisno1.ironfall.tiles.TileType;
 
 import java.util.ArrayList;
@@ -16,14 +17,14 @@ import java.util.ArrayList;
 public class PlacementController {
 
     private final IronfallGame game;
-    private final TileEngine engine;
     private final BuildingManager buildings;
 
     private final ConveyorPathHelper conveyorHelper;
+    private Building prototype = null;
 
+    // Conveyor drag state
     private boolean draggingConveyor = false;
     private int dragStartX, dragStartY;
-
     private boolean prevLeftDown = false;
     private boolean dragDirectionLocked = false;
     private boolean horizontalFirst = true;
@@ -31,11 +32,16 @@ public class PlacementController {
     private ArrayList<Vector2> cachedPath = null;
     private int cachedEndX = -1, cachedEndY = -1;
 
-    public PlacementController(IronfallGame game, TileEngine engine, BuildingManager buildings) {
+    public PlacementController(IronfallGame game, BuildingManager buildings) {
         this.game = game;
-        this.engine = engine;
         this.buildings = buildings;
         this.conveyorHelper = new ConveyorPathHelper(buildings);
+    }
+
+    // Called by sidebar
+    public void setPrototype(Building proto) {
+        this.prototype = proto;
+        game.mode = GameMode.PLACING_GENERIC;
     }
 
     public void update() {
@@ -45,82 +51,90 @@ public class PlacementController {
         boolean leftJustReleased = prevLeftDown && !leftDown;
         prevLeftDown = leftDown;
 
-        switch (game.mode) {
-            case PLACING_MINER -> updateMinerPlacement(leftJustPressed);
-            case PLACING_CORE -> updateCorePlacement(leftJustPressed);
-            case PLACING_CONVEYOR -> updateConveyorPlacement(leftJustPressed, leftJustReleased);
+        if (game.mode == GameMode.PLACING_GENERIC) {
+            updateGenericPlacement(leftJustPressed, leftJustReleased);
+            // Conveyor drag still works inside generic placement
         }
     }
 
     public void render(SpriteBatch batch) {
-        switch (game.mode) {
-            case PLACING_MINER -> renderMinerGhost(batch);
-            case PLACING_CORE -> renderCoreGhost(batch);
-            case PLACING_CONVEYOR -> renderConveyorGhost(batch);
+        if (game.mode == GameMode.PLACING_GENERIC) {
+            renderGenericGhost(batch);
         }
     }
 
-    private void updateMinerPlacement(boolean leftJustPressed) {
-        int px = game.tileX - 1;
-        int py = game.tileY - 1;
+    private void updateGenericPlacement(boolean leftJustPressed, boolean leftJustReleased) {
+        if (prototype == null) {
+            game.mode = GameMode.NORMAL;
+            return;
+        }
 
-        boolean valid = buildings.canPlace(px, py, 2, 2) &&
-            oreCheck(px, py, 2, 2);
+        // Conveyor placement is special
+        if (prototype instanceof Conveyor) {
+            updateConveyorPlacement(leftJustReleased);
+            return;
+        }
+
+        int px = game.tileX - prototype.width / 2;
+        int py = game.tileY - prototype.height / 2;
+
+        boolean valid = buildings.canPlace(px, py, prototype.width, prototype.height);
+
+        // Miner-specific validation
+        if (prototype instanceof BasicMiner) {
+            valid &= oreCheck(px, py, prototype.width, prototype.height);
+        }
 
         if (leftJustPressed && valid) {
-            buildings.place(new BasicMiner(px, py, engine));
+            buildings.place(prototype.copyAt(px, py));
+            prototype = null;
             game.mode = GameMode.NORMAL;
         }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+            prototype = null;
             game.mode = GameMode.NORMAL;
         }
     }
 
-    private void renderMinerGhost(SpriteBatch batch) {
-        int px = game.tileX - 1;
-        int py = game.tileY - 1;
+    private void renderGenericGhost(SpriteBatch batch) {
+        if (prototype == null) return;
 
-        boolean valid = buildings.canPlace(px, py, 2, 2) &&
-            oreCheck(px, py, 2, 2);
+        // Conveyor ghost handled separately
+        if (prototype instanceof Conveyor) {
+            renderConveyorGhost(batch);
+            return;
+        }
+
+        int px = game.tileX - prototype.width / 2;
+        int py = game.tileY - prototype.height / 2;
+
+        boolean valid = buildings.canPlace(px, py, prototype.width, prototype.height);
+
+        // Miner-specific validation
+        if (prototype instanceof BasicMiner) {
+            valid &= oreCheck(px, py, prototype.width, prototype.height);
+        }
 
         batch.setColor(valid ? 0f : 1f, valid ? 1f : 0f, 0f, 0.5f);
-        batch.draw(Assets.basicMiner, px * 16, py * 16, 32, 32);
+        batch.draw(
+            prototype.getSprite(),
+            px * 16,
+            py * 16,
+            prototype.width * 16,
+            prototype.height * 16
+        );
         batch.setColor(1f, 1f, 1f, 1f);
     }
 
-    private void updateCorePlacement(boolean leftJustPressed) {
-        int px = game.tileX - 2;
-        int py = game.tileY - 2;
-
-        boolean valid = buildings.canPlace(px, py, 4, 4);
-
-        if (leftJustPressed && valid) {
-            buildings.place(new Core(px, py));
-            game.mode = GameMode.NORMAL;
-        }
-
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
-            game.mode = GameMode.NORMAL;
-        }
-    }
-
-    private void renderCoreGhost(SpriteBatch batch) {
-        int px = game.tileX - 2;
-        int py = game.tileY - 2;
-
-        boolean valid = buildings.canPlace(px, py, 4, 4);
-
-        batch.setColor(valid ? 0f : 1f, valid ? 1f : 0f, 0f, 0.5f);
-        batch.draw(Assets.core, px * 16, py * 16, 64, 64);
-        batch.setColor(1f, 1f, 1f, 1f);
-    }
-
-    private void updateConveyorPlacement(boolean leftJustPressed, boolean leftJustReleased) {
+    private void updateConveyorPlacement(boolean leftJustReleased) {
         int tx = game.tileX;
         int ty = game.tileY;
 
-        if (leftJustPressed) {
+        boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+
+        // Start drag as soon as the user clicks in the world
+        if (!draggingConveyor && leftDown) {
             draggingConveyor = true;
             dragStartX = tx;
             dragStartY = ty;
@@ -140,7 +154,6 @@ public class PlacementController {
             }
         }
 
-        // Update cached path if endpoint changed
         if (draggingConveyor && dragDirectionLocked && (tx != cachedEndX || ty != cachedEndY)) {
             cachedPath = conveyorHelper.computePath(dragStartX, dragStartY, tx, ty, horizontalFirst);
             cachedEndX = tx;
@@ -151,7 +164,6 @@ public class PlacementController {
             draggingConveyor = false;
 
             if (cachedPath != null) {
-                // Use the exact cached path from preview
                 for (int i = 0; i < cachedPath.size(); i++) {
                     Vector2 p = cachedPath.get(i);
                     Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
@@ -162,6 +174,7 @@ public class PlacementController {
             cachedPath = null;
             cachedEndX = -1;
             cachedEndY = -1;
+            prototype = null;
             game.mode = GameMode.NORMAL;
         }
 
@@ -170,6 +183,7 @@ public class PlacementController {
             cachedPath = null;
             cachedEndX = -1;
             cachedEndY = -1;
+            prototype = null;
             game.mode = GameMode.NORMAL;
         }
     }
@@ -188,7 +202,7 @@ public class PlacementController {
         batch.setColor(1f, 1f, 1f, 1f);
     }
 
-    private com.badlogic.gdx.graphics.g2d.TextureRegion getConveyorSprite(Conveyor.Direction dir) {
+    private TextureRegion getConveyorSprite(Conveyor.Direction dir) {
         return switch (dir) {
             case UP -> Assets.conveyorUp;
             case DOWN -> Assets.conveyorDown;
@@ -203,16 +217,16 @@ public class PlacementController {
 
         for (int dy = 0; dy < h; dy++) {
             for (int dx = 0; dx < w; dx++) {
-                TileType t = TileType.fromId(engine.getTile(x + dx, y + dy));
+                TileType t = TileType.fromId(game.engine.getTile(x + dx, y + dy));
 
                 if (t == TileType.COAL || t == TileType.IRON || t == TileType.COPPER) {
                     if (oreType == null) oreType = t;
-                    if (t != oreType) return false;
+                    if (t != oreType) return false;  // must be uniform ore
                     oreCount++;
                 }
             }
         }
 
-        return oreCount >= 1;
+        return oreCount >= 1;  // must have at least one ore tile
     }
 }

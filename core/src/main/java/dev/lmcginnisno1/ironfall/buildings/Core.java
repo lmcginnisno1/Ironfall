@@ -29,14 +29,8 @@ public class Core extends Building {
         return inventory;
     }
 
-    public String getInventoryString() {
-        StringBuilder sb = new StringBuilder();
-        for (var entry : inventory.entrySet()) {
-            sb.append(entry.getKey().name)
-                .append(": ")
-                .append(entry.getValue())
-                .append("\n");
-        }
-        return sb.toString();
+    @Override
+    public Building copyAt(int x, int y) {
+        return new Core(x, y);
     }
 }

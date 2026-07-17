@@ -28,11 +28,11 @@ public class IronfallGame extends ApplicationAdapter {
     private BitmapFont font;
 
     // World
-    private TileEngine engine;
+    public TileEngine engine;
     private BuildingManager buildingManager;
 
     // Cameras
-    private OrthographicCamera hudCamera;
+    public OrthographicCamera hudCamera;
     private CameraController cameraController;
 
     // Subsystems
@@ -41,7 +41,7 @@ public class IronfallGame extends ApplicationAdapter {
     private SelectionRenderer selectionRenderer;
     private WorldRenderer worldRenderer;
     private OverlayRenderer overlayRenderer;
-    private PlacementController placementController;
+    public PlacementController placementController;
 
     // Game state
     public GameMode mode = GameMode.NORMAL;
@@ -79,17 +79,17 @@ public class IronfallGame extends ApplicationAdapter {
 
         // Subsystems
         selectionManager = new SelectionManager(this, buildingManager);
-        inputController = new InputController(this, selectionManager);
-        selectionRenderer = new SelectionRenderer(selectionManager);
         worldRenderer = new WorldRenderer(this, engine, buildingManager);
         overlayRenderer = new OverlayRenderer(this, selectionManager, font);
+        inputController = new InputController(this, selectionManager, overlayRenderer);
+        selectionRenderer = new SelectionRenderer(selectionManager);
         cameraController = new CameraController(
             engine.getCamera(),
             () -> mode == GameMode.NORMAL,
             width * TileEngine.TILE_SIZE,
             height * TileEngine.TILE_SIZE
         );
-        placementController = new PlacementController(this, engine, buildingManager);
+        placementController = new PlacementController(this, buildingManager);
 
         // Generate the world and pick the best location for the core
         WorldGenerator.generate(engine, buildingManager);
