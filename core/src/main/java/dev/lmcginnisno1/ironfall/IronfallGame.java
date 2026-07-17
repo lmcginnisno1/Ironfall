@@ -58,6 +58,8 @@ public class IronfallGame extends ApplicationAdapter {
     // Debug
     public boolean showGrid = false;
 
+    public int credits = 0;
+
     @Override
     public void create() {
         batch = new SpriteBatch();

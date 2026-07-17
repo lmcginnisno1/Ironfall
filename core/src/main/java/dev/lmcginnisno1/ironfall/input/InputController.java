@@ -71,12 +71,44 @@ public class InputController {
     }
 
     private void handleSingleSelectMode() {
+        // Delete selected building
         if (Gdx.input.isKeyJustPressed(Input.Keys.X)) {
             selection.deleteSelected();
             game.mode = GameMode.NORMAL;
             return;
         }
 
+        // Handle continuous slider dragging if mouse is held down
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+            if (overlay.isDraggingSlider()) {
+                overlay.updateActiveDrag(Gdx.input.getX());
+                return; // Consume input so we don't accidentally select something else
+            }
+        } else {
+            // Mouse is released, stop dragging
+            overlay.stopDragging();
+        }
+
+        // Handle initial click-down events
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            int mx = Gdx.input.getX();
+            int my = Gdx.input.getY();
+
+            // Check if they clicked the core sliders/sell button
+            OverlayRenderer.UIResult ui = overlay.hitTest(mx, my);
+            if (ui.type() != OverlayRenderer.UIResultType.NONE) {
+                overlay.handleUIAction(ui);
+                return; // Click was handled by UI
+            }
+
+            // Clicked outside UI: select another building or clear selection
+            selection.trySelectAt(game.tileX, game.tileY);
+            if (selection.getSelected() == null) {
+                game.mode = GameMode.NORMAL;
+            }
+        }
+
+        // Deselect single selection on Right Click
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
             selection.clearSelection();
             game.mode = GameMode.NORMAL;
