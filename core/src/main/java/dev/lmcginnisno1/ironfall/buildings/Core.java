@@ -3,6 +3,7 @@ package dev.lmcginnisno1.ironfall.buildings;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.items.Item;
 import dev.lmcginnisno1.ironfall.items.ItemType;
+import dev.lmcginnisno1.ironfall.game.Balance;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -96,14 +97,7 @@ public class Core extends Building {
     }
 
     public int getPriceForType(ItemType type) {
-        if (type == null) return 0;
-
-        return switch (type) {
-            case COAL -> 1;
-            case COPPER -> 2;
-            case IRON -> 3;
-            default -> 0;
-        };
+        return Balance.sellPriceOf(type);
     }
 
     public int sellAllItems() {

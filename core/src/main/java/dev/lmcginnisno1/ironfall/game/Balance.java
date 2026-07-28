@@ -1,0 +1,67 @@
+package dev.lmcginnisno1.ironfall.game;
+
+import dev.lmcginnisno1.ironfall.items.ItemType;
+
+/**
+ * Every tunable number in the game lives here. If you're rebalancing,
+ * this is the one file to open — nothing outside this file should
+ * hardcode a price, cost, rate, or cap; it should reference a constant
+ * from here instead.
+ */
+public final class Balance {
+
+    private Balance() {} // constants only, never instantiated
+
+    // --- Starting state ---
+
+    // Enough for one Basic Miner plus a short belt run to the Core, so a
+    // fresh save isn't a softlock before you've sold anything.
+    public static final int STARTING_CREDITS = 100;
+
+    // --- Building costs (credits) ---
+
+    public static final int MINER_COST = 50;
+    public static final int CONVEYOR_COST_PER_TILE = 5;
+
+    // --- Building behavior ---
+
+    public static final float MINER_BASE_RATE_PER_ORE_TILE = 0.25f; // ore/sec per ore tile covered
+    public static final float CONVEYOR_MOVE_TIME = 0.25f;           // seconds to cross one tile (4 items/sec)
+    public static final float CONVEYOR_ITEM_SPACING = 0.33f;        // minimum gap between items on a belt
+
+    // --- Resource sell prices (credits per item) ---
+
+    public static final int COAL_SELL_PRICE = 1;
+    public static final int COPPER_SELL_PRICE = 2;
+    public static final int IRON_SELL_PRICE = 3;
+
+    public static int sellPriceOf(ItemType type) {
+        if (type == null) return 0;
+
+        return switch (type) {
+            case COAL -> COAL_SELL_PRICE;
+            case COPPER -> COPPER_SELL_PRICE;
+            case IRON -> IRON_SELL_PRICE;
+        };
+    }
+
+    // --- Upgrades: shared ---
+
+    public static final int UPGRADE_MAX_LEVEL = 5;
+
+    // --- Upgrades: miner speed (paid in Iron) ---
+
+    public static final int MINER_UPGRADE_BASE_COST = 20;         // Iron, per level
+    public static final float MINER_UPGRADE_BONUS_PER_LEVEL = 0.15f; // +15% mining rate per level
+
+    // --- Upgrades: belt speed (paid in Copper) ---
+
+    public static final int BELT_UPGRADE_BASE_COST = 15;          // Copper, per level
+    public static final float BELT_UPGRADE_BONUS_PER_LEVEL = 0.15f; // +15% belt speed per level
+
+    // --- Upgrades: storage capacity (paid in Coal) ---
+
+    public static final int STORAGE_UPGRADE_BASE_COST = 25;       // Coal, per level
+    public static final int STORAGE_BASE_CAP = 200;               // per resource type, at level 0
+    public static final int STORAGE_CAP_PER_LEVEL = 100;          // added per level, per resource type
+}

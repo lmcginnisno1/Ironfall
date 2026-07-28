@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 import dev.lmcginnisno1.ironfall.buildings.*;
 import dev.lmcginnisno1.ironfall.game.GameMode;
+import dev.lmcginnisno1.ironfall.game.Balance;
 import dev.lmcginnisno1.ironfall.input.*;
 import dev.lmcginnisno1.ironfall.render.*;
 import dev.lmcginnisno1.ironfall.selection.*;
@@ -60,7 +61,7 @@ public class IronfallGame extends ApplicationAdapter {
 
     // Enough for one Basic Miner ($50) plus a short belt run to the Core,
     // so a fresh save isn't a softlock before you've sold anything.
-    public int credits = 100;
+    public int credits = Balance.STARTING_CREDITS;
 
     @Override
     public void create() {
@@ -146,6 +147,18 @@ public class IronfallGame extends ApplicationAdapter {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
         overlayRenderer.render(batch);
+
+        if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height) {
+            TileType t = TileType.fromId(engine.getTile(tileX, tileY));
+            drawOutlined(
+                font,
+                batch,
+                t.name + " (" + tileX + ", " + tileY + ")",
+                Gdx.input.getX() + 16,
+                screenHeight - Gdx.input.getY() + 16
+            );
+        }
+
         batch.end();
     }
 

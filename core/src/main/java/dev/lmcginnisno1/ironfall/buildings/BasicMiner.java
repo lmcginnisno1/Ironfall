@@ -4,6 +4,7 @@ import dev.lmcginnisno1.ironfall.items.Item;
 import dev.lmcginnisno1.ironfall.items.ItemType;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.tiles.TileEngine;
+import dev.lmcginnisno1.ironfall.game.Balance;
 
 public class BasicMiner extends Building {
 
@@ -19,7 +20,7 @@ public class BasicMiner extends Building {
 
     private final TileEngine engine;
 
-    public static final int COST = 50;
+    public static final int COST = Balance.MINER_COST;
 
     public BasicMiner(int x, int y, TileEngine engine) {
         super(x, y, 2, 2, Assets.basicMiner, COST);
@@ -44,7 +45,7 @@ public class BasicMiner extends Building {
         int oreTiles = Math.min(count, 4);
 
         // production rate based on ore coverage
-        this.rate = 0.25f * oreTiles;
+        this.rate = Balance.MINER_BASE_RATE_PER_ORE_TILE * oreTiles;
     }
 
     @Override

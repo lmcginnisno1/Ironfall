@@ -28,7 +28,11 @@ jobs:
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           CLEAN_VERSION="${TAG_VERSION#v}"
-          ./gradlew lwjgl3:jar -Pversion=$CLEAN_VERSION
+          # lwjgl3/build.gradle names the jar using the "projectVersion"
+          # property specifically (set in gradle.properties), not Gradle's
+          # built-in "version" property — so that's what has to be overridden
+          # here for the jar's filename to actually pick up the tag.
+          ./gradlew lwjgl3:jar -PprojectVersion=$CLEAN_VERSION
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

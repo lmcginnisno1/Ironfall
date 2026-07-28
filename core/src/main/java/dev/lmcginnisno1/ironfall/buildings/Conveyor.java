@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.items.Item;
+import dev.lmcginnisno1.ironfall.game.Balance;
 
 public class Conveyor extends Building {
 
@@ -20,13 +21,13 @@ public class Conveyor extends Building {
     private final Array<MovingItem> items = new Array<>();
 
     // Movement timing
-    private static final float MOVE_TIME = 0.25f; // 4 items/sec
-    private static final float SPACING = 0.33f;   // minimum distance between items
+    private static final float MOVE_TIME = Balance.CONVEYOR_MOVE_TIME;
+    private static final float SPACING = Balance.CONVEYOR_ITEM_SPACING;
 
     // Cosmetic belt animation (unchanged)
     private float animPhase = 0f;
 
-    public static final int COST = 5;
+    public static final int COST = Balance.CONVEYOR_COST_PER_TILE;
 
     public
     Conveyor(int x, int y, Direction direction) {
