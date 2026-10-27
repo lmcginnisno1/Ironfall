@@ -24,13 +24,12 @@ public class Conveyor extends Building {
     private static final float MOVE_TIME = Balance.CONVEYOR_MOVE_TIME;
     private static final float SPACING = Balance.CONVEYOR_ITEM_SPACING;
 
-    // Cosmetic belt animation (unchanged)
+    // Cosmetic belt animation
     private float animPhase = 0f;
 
     public static final int COST = Balance.CONVEYOR_COST_PER_TILE;
 
-    public
-    Conveyor(int x, int y, Direction direction) {
+    public Conveyor(int x, int y, Direction direction) {
         super(x, y, 1, 1, getSpriteFor(direction), COST);
         this.direction = direction;
     }
@@ -108,10 +107,25 @@ public class Conveyor extends Building {
             }
         }
 
-        // Move into core (unless it's at its storage cap for this resource,
-        // in which case fall through to the "blocked" case below)
+        // Move into core
         if (b instanceof Core core) {
             if (core.acceptItem(m.item)) {
+                items.removeValue(m, true);
+                return;
+            }
+        }
+
+        // Move into a smelter
+        if (b instanceof Smelter smelter) {
+            if (smelter.acceptItem(m.item)) {
+                items.removeValue(m, true);
+                return;
+            }
+        }
+
+        // Move into a splitter (passes the source tile x, y and target tile nx, ny)
+        if (b instanceof Splitter splitter) {
+            if (splitter.acceptItem(m.item, x, y, nx, ny)) {
                 items.removeValue(m, true);
                 return;
             }
@@ -130,5 +144,4 @@ public class Conveyor extends Building {
     public Building copyAt(int x, int y) {
         return new Conveyor(x, y, this.direction);
     }
-
 }

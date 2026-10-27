@@ -130,7 +130,12 @@ public class IronfallGame extends ApplicationAdapter {
         inputController.update();
         selectionManager.update();
         buildingManager.update(delta);
-        placementController.update();
+        // placementController.update() is NOT called here -- InputController
+        // already calls it internally (via handlePlacementMode()) whenever
+        // mode == PLACING_GENERIC. Calling it again here was causing it to
+        // run twice per frame, silently double-firing anything unprotected
+        // by its own state guards -- notably Q/E rotation, which isn't
+        // idempotent within a frame the way placement/drag-start are.
 
         screenToTile(Gdx.input.getX(), Gdx.input.getY());
 

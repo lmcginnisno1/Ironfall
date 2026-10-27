@@ -4,38 +4,61 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Array;
 
 public class Assets {
     public static TextureRegion conveyorUp;
     public static TextureRegion conveyorDown;
     public static TextureRegion conveyorLeft;
     public static TextureRegion conveyorRight;
+
+    public static TextureRegion splitterUp;
+    public static TextureRegion splitterDown;
+    public static TextureRegion splitterLeft;
+    public static TextureRegion splitterRight;
+
     public static TextureRegion core;
     public static TextureRegion basicMiner;
+    public static TextureRegion smelter;
     public static TextureRegion whitePixel;
 
+    // Every texture we create, so dispose() can't miss one.
+    private static final Array<Texture> textures = new Array<>();
+
+    // Loads a sprite with Nearest filtering so pixel art stays crisp when the camera zooms.
+    private static TextureRegion sprite(String path) {
+        Texture t = new Texture(path);
+        t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        textures.add(t);
+        return new TextureRegion(t);
+    }
 
     public static void load() {
-        conveyorUp = new TextureRegion(new Texture("buildings/conveyor_straight_up.png"));
-        conveyorDown = new TextureRegion(new Texture("buildings/conveyor_straight_down.png"));
-        conveyorLeft = new TextureRegion(new Texture("buildings/conveyor_straight_left.png"));
-        conveyorRight = new TextureRegion(new Texture("buildings/conveyor_straight_right.png"));
-        core = new TextureRegion(new Texture("buildings/core.png"));
-        basicMiner = new TextureRegion(new Texture("buildings/miner.png"));
+        conveyorUp = sprite("buildings/conveyor/conveyor_straight_up.png");
+        conveyorDown = sprite("buildings/conveyor/conveyor_straight_down.png");
+        conveyorLeft = sprite("buildings/conveyor/conveyor_straight_left.png");
+        conveyorRight = sprite("buildings/conveyor/conveyor_straight_right.png");
+
+        splitterUp = sprite("buildings/splitter/splitter_up.png");
+        splitterDown = sprite("buildings/splitter/splitter_down.png");
+        splitterLeft = sprite("buildings/splitter/splitter_left.png");
+        splitterRight = sprite("buildings/splitter/splitter_right.png");
+
+        core = sprite("buildings/core.png");
+        basicMiner = sprite("buildings/miner.png");
+        smelter = sprite("buildings/smelter.png");
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE);
         pm.fill();
-        whitePixel = new TextureRegion(new Texture(pm));
+        Texture white = new Texture(pm);
+        textures.add(white);
+        whitePixel = new TextureRegion(white);
         pm.dispose();
     }
 
-    public static void dispose(){
-        conveyorUp.getTexture().dispose();
-        conveyorDown.getTexture().dispose();
-        conveyorLeft.getTexture().dispose();
-        conveyorRight.getTexture().dispose();
-        core.getTexture().dispose();
-        whitePixel.getTexture().dispose();
+    public static void dispose() {
+        for (Texture t : textures) t.dispose();
+        textures.clear();
     }
 }

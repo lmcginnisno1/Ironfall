@@ -22,6 +22,25 @@ public class PlacementController {
     private final ConveyorPathHelper conveyorHelper;
     private Building prototype = null;
 
+    // Active rotation state (index into ROTATION_ORDER below)
+    public int currentRotation = 0;
+
+    // Rotation cycle for the Q/E hotkeys. Deliberately NOT Direction.values()
+    // -- Conveyor.Direction is declared { UP, DOWN, LEFT, RIGHT }, which is
+    // not a valid 90-degree-per-step sequence (UP -> DOWN is a 180 degree
+    // flip, not a turn). Indexing values() directly produced a glitchy
+    // flip/turn/flip rotation. This array is a genuine clockwise sequence:
+    // 0: East, 1: South, 2: West, 3: North.
+    // 0: North, 1: East, 2: South, 3: West -- clockwise, starting at UP so
+    // the default (unrotated) placement is vertical, matching expectation,
+    // rather than starting sideways.
+    private static final Conveyor.Direction[] ROTATION_ORDER = {
+        Conveyor.Direction.UP,
+        Conveyor.Direction.RIGHT,
+        Conveyor.Direction.DOWN,
+        Conveyor.Direction.LEFT
+    };
+
     // Conveyor drag state
     private boolean draggingConveyor = false;
     private int dragStartX, dragStartY;
@@ -46,11 +65,11 @@ public class PlacementController {
     public void setPrototype(Building proto) {
         this.prototype = proto;
         this.justSelected = true;
+        this.currentRotation = 0; // Reset orientation when picking up a new item
         game.mode = GameMode.PLACING_GENERIC;
     }
 
     public void update() {
-
         boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         boolean leftJustPressed = Gdx.input.isButtonJustPressed(Input.Buttons.LEFT);
         boolean leftJustReleased = prevLeftDown && !leftDown;
@@ -64,8 +83,15 @@ public class PlacementController {
         }
 
         if (game.mode == GameMode.PLACING_GENERIC) {
+            // Hotkeys Q/E to rotate current placement candidate
+            if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+                rotateLeft();
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                rotateRight();
+            }
+
             updateGenericPlacement(leftJustPressed, leftJustReleased);
-            // Conveyor drag still works inside generic placement
         }
     }
 
@@ -87,6 +113,13 @@ public class PlacementController {
             return;
         }
 
+        // Splitter is also special: rotatable, and its footprint swaps
+        // width/height with rotation (the first non-square building).
+        if (prototype instanceof Splitter) {
+            updateSplitterPlacement(leftJustPressed);
+            return;
+        }
+
         int px = game.tileX - prototype.width / 2;
         int py = game.tileY - prototype.height / 2;
 
@@ -102,12 +135,9 @@ public class PlacementController {
         if (leftJustPressed && valid) {
             game.credits -= prototype.cost;
             buildings.place(prototype.copyAt(px, py));
-            // Deliberately not resetting prototype/mode here: staying in
-            // PLACING_GENERIC lets the player place another one immediately.
-            // Right-click (below) is the way to exit placement mode.
         }
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+        if (cancelRequested()) {
             prototype = null;
             game.mode = GameMode.NORMAL;
         }
@@ -119,6 +149,12 @@ public class PlacementController {
         // Conveyor ghost handled separately
         if (prototype instanceof Conveyor) {
             renderConveyorGhost(batch);
+            return;
+        }
+
+        // Splitter ghost handled separately (rotatable, swapping footprint)
+        if (prototype instanceof Splitter) {
+            renderSplitterGhost(batch);
             return;
         }
 
@@ -148,9 +184,6 @@ public class PlacementController {
         int tx = game.tileX;
         int ty = game.tileY;
 
-        // Start drag only on a genuinely fresh press — not just "button
-        // currently held" — so a click-and-hold carried over from selecting
-        // the sidebar entry can't be reused to start a drag at that spot.
         if (!draggingConveyor && leftJustPressed) {
             draggingConveyor = true;
             dragStartX = tx;
@@ -180,7 +213,7 @@ public class PlacementController {
         if (draggingConveyor && leftJustReleased) {
             draggingConveyor = false;
 
-            if (cachedPath != null) {
+            if (cachedPath != null && !cachedPath.isEmpty()) {
                 int totalCost = cachedPath.size() * Conveyor.COST;
 
                 if (game.credits >= totalCost) {
@@ -192,19 +225,21 @@ public class PlacementController {
                         buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
                     }
                 }
-                // Can't afford the full run: place nothing, rather than
-                // leaving a partial belt that doesn't reach where intended.
+            } else {
+                // Single-click conveyor placement using current manual rotation
+                Conveyor.Direction dir = ROTATION_ORDER[currentRotation];
+                if (buildings.canPlace(tx, ty, 1, 1) && game.credits >= Conveyor.COST) {
+                    game.credits -= Conveyor.COST;
+                    buildings.place(new Conveyor(tx, ty, dir));
+                }
             }
 
             cachedPath = null;
             cachedEndX = -1;
             cachedEndY = -1;
-            // Deliberately not resetting prototype/mode here: staying in
-            // PLACING_GENERIC lets the player start another belt drag right
-            // away. Right-click (below) is the way to exit placement mode.
         }
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+        if (cancelRequested()) {
             draggingConveyor = false;
             cachedPath = null;
             cachedEndX = -1;
@@ -216,14 +251,14 @@ public class PlacementController {
 
     private void renderConveyorGhost(SpriteBatch batch) {
         if (!draggingConveyor) {
-            // No drag in progress yet — still show a preview tile at the
-            // cursor so it's clear a conveyor is armed and ready to place,
-            // same as every other placeable building already does.
             int tx = game.tileX;
             int ty = game.tileY;
 
-            batch.setColor(1f, 1f, 1f, 0.5f);
-            batch.draw(getConveyorSprite(Conveyor.Direction.RIGHT), tx * 16, ty * 16, 16, 16);
+            boolean valid = buildings.canPlace(tx, ty, 1, 1) && game.credits >= Conveyor.COST;
+            batch.setColor(valid ? 1f : 1f, valid ? 1f : 0.3f, valid ? 1f : 0.3f, 0.5f);
+
+            Conveyor.Direction dir = ROTATION_ORDER[currentRotation];
+            batch.draw(getConveyorSprite(dir), tx * 16, ty * 16, 16, 16);
             batch.setColor(1f, 1f, 1f, 1f);
             return;
         }
@@ -241,6 +276,56 @@ public class PlacementController {
         }
 
         batch.setColor(1f, 1f, 1f, 1f);
+    }
+
+    private void updateSplitterPlacement(boolean leftJustPressed) {
+        Conveyor.Direction facing = ROTATION_ORDER[currentRotation];
+
+        // Cursor represents the back (input) tile -- convert to the actual
+        // footprint origin, which depends on facing (see Splitter's own
+        // originXFor/originYFor, the single source of truth for this math).
+        int cx = game.tileX, cy = game.tileY;
+        int ox = Splitter.originXFor(cx, cy, facing);
+        int oy = Splitter.originYFor(cx, cy, facing);
+        int w = Splitter.widthFor(facing);
+        int h = Splitter.heightFor(facing);
+
+        boolean valid = buildings.canPlace(ox, oy, w, h) && game.credits >= Splitter.COST;
+
+        if (leftJustPressed && valid) {
+            game.credits -= Splitter.COST;
+            buildings.place(new Splitter(ox, oy, facing));
+        }
+
+        if (cancelRequested()) {
+            prototype = null;
+            game.mode = GameMode.NORMAL;
+        }
+    }
+
+    private void renderSplitterGhost(SpriteBatch batch) {
+        Conveyor.Direction facing = ROTATION_ORDER[currentRotation];
+
+        int cx = game.tileX, cy = game.tileY;
+        int ox = Splitter.originXFor(cx, cy, facing);
+        int oy = Splitter.originYFor(cx, cy, facing);
+        int w = Splitter.widthFor(facing);
+        int h = Splitter.heightFor(facing);
+
+        boolean valid = buildings.canPlace(ox, oy, w, h) && game.credits >= Splitter.COST;
+
+        batch.setColor(valid ? 1f : 1f, valid ? 1f : 0.3f, valid ? 1f : 0.3f, 0.6f);
+        batch.draw(getSplitterSprite(facing), ox * 16, oy * 16, w * 16, h * 16);
+        batch.setColor(1f, 1f, 1f, 1f);
+    }
+
+    private TextureRegion getSplitterSprite(Conveyor.Direction dir) {
+        return switch (dir) {
+            case UP -> Assets.splitterUp;
+            case RIGHT -> Assets.splitterRight;
+            case DOWN -> Assets.splitterDown;
+            case LEFT -> Assets.splitterLeft;
+        };
     }
 
     private TextureRegion getConveyorSprite(Conveyor.Direction dir) {
@@ -269,5 +354,19 @@ public class PlacementController {
         }
 
         return oreCount >= 1;  // must have at least one ore tile
+    }
+
+    public void rotateLeft() {
+        currentRotation = (currentRotation + 3) % 4; // Counter-clockwise
+    }
+
+    public void rotateRight() {
+        currentRotation = (currentRotation + 1) % 4; // Clockwise
+    }
+
+    /** True on the frame the player asks to cancel placement, via either input. */
+    private boolean cancelRequested() {
+        return Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)
+            || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
     }
 }

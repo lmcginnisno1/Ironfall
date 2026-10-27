@@ -21,7 +21,7 @@ public final class Balance {
     // --- Building costs (credits) ---
 
     public static final int MINER_COST = 50;
-    public static final int CONVEYOR_COST_PER_TILE = 5;
+    public static final int CONVEYOR_COST_PER_TILE = 2;
 
     // --- Building behavior ---
 
@@ -35,6 +35,11 @@ public final class Balance {
     public static final int COPPER_SELL_PRICE = 2;
     public static final int IRON_SELL_PRICE = 3;
 
+    // Ingots sell at 4x their source ore's price — smelting is meant to be
+    // a clear value-add over just selling raw ore.
+    public static final int IRON_INGOT_SELL_PRICE = IRON_SELL_PRICE * 4;     // 12
+    public static final int COPPER_INGOT_SELL_PRICE = COPPER_SELL_PRICE * 4; // 8
+
     public static int sellPriceOf(ItemType type) {
         if (type == null) return 0;
 
@@ -42,8 +47,23 @@ public final class Balance {
             case COAL -> COAL_SELL_PRICE;
             case COPPER -> COPPER_SELL_PRICE;
             case IRON -> IRON_SELL_PRICE;
+            case IRON_INGOT -> IRON_INGOT_SELL_PRICE;
+            case COPPER_INGOT -> COPPER_INGOT_SELL_PRICE;
         };
     }
+
+    // --- Smelter ---
+
+    public static final int SMELTER_COST = 75;                // credits
+    public static final int SMELTER_MAX_BUFFER = 10;           // per ingredient (coal, iron, copper)
+    public static final int SMELTER_ORE_REQUIREMENT = 1;       // ore consumed per craft
+    public static final int SMELTER_COAL_REQUIREMENT = 1;      // coal consumed per craft
+    public static final float SMELTER_CRAFT_TIME = 2.0f;       // seconds per ingot
+
+    // --- Splitter ---
+
+    public static final int SPLITTER_COST = 20;                // credits, flat (not per-tile like Conveyor)
+    public static final int SPLITTER_MAX_BUFFER = 4;           // items queued internally awaiting a clear output
 
     // --- Upgrades: shared ---
 

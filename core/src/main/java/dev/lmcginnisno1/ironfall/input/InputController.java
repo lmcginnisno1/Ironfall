@@ -22,33 +22,24 @@ public class InputController {
     public void update() {
         game.screenToTile(Gdx.input.getX(), Gdx.input.getY());
 
+        // Global hotkeys accessible in any mode
+        if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
+            game.showGrid = !game.showGrid;
+        }
+
         switch (game.mode) {
             case NORMAL -> handleNormalMode();
             case SELECTING_SINGLE -> handleSingleSelectMode();
             case DELETE_MODE -> handleDeleteMode();
-            case PLACING_MINER, PLACING_CORE, PLACING_CONVEYOR -> handlePlacementMode();
+            case PLACING_GENERIC -> handlePlacementMode();
         }
     }
 
     private void handleNormalMode() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
-            game.mode = GameMode.PLACING_MINER;
-            return;
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
-            game.mode = GameMode.PLACING_CONVEYOR;
-            return;
-        }
-
         if (Gdx.input.isKeyJustPressed(Input.Keys.X)) {
             game.mode = GameMode.DELETE_MODE;
             selection.clearSelection();
             return;
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
-            game.showGrid = !game.showGrid;
         }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
@@ -141,8 +132,7 @@ public class InputController {
     }
 
     private void handlePlacementMode() {
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
-            game.mode = GameMode.NORMAL;
-        }
+        // Delegate placement interactions, key rotations, and mouse drags to PlacementController
+        game.placementController.update();
     }
 }

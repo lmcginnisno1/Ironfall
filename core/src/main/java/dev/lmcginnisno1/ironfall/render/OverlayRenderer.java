@@ -13,7 +13,6 @@ import dev.lmcginnisno1.ironfall.items.ItemType;
 import dev.lmcginnisno1.ironfall.selection.SelectionManager;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.tiles.TileEngine;
-import dev.lmcginnisno1.ironfall.tiles.TileType;
 
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,11 @@ public class OverlayRenderer {
                 new BuildEntry("Basic Miner", Assets.basicMiner, BasicMiner.COST, () -> new BasicMiner(0,0, game.engine))
             ),
             BuildCategory.TRANSPORT, List.of(
-                new BuildEntry("Conveyor", Assets.conveyorUp, Conveyor.COST, () -> new Conveyor(0,0, Conveyor.Direction.UP))
+                new BuildEntry("Conveyor", Assets.conveyorUp, Conveyor.COST, () -> new Conveyor(0,0, Conveyor.Direction.UP)),
+                new BuildEntry("Splitter", Assets.splitterUp, Splitter.COST, () -> new Splitter(0,0, Conveyor.Direction.UP))
+            ),
+            BuildCategory.PROCESSING, List.of(
+                new BuildEntry("Smelter", Assets.smelter, Smelter.COST, () -> new Smelter(0,0))
             )
         );
     }
@@ -83,36 +86,6 @@ public class OverlayRenderer {
         }
 
         drawHUD(batch);
-
-        // --- FIXED CURSOR COORDINATES TEXT WITH ORIGINAL OUTLINED STYLE ---
-        // 1. Grab raw mouse position directly from LibGDX input
-        int screenX = com.badlogic.gdx.Gdx.input.getX();
-        int screenY = com.badlogic.gdx.Gdx.input.getY();
-
-        // 2. Leverage TileEngine's camera unprojection to get the exact map grid index
-        com.badlogic.gdx.math.Vector2 tileCoords = game.engine.screenToWorld(screenX, screenY);
-        int tileX = (int) tileCoords.x;
-        int tileY = (int) tileCoords.y;
-
-        // 3. Render only if the cursor sits within the bounds of the active map grid
-        if (tileX >= 0 && tileX < game.engine.getWidth() && tileY >= 0 && tileY < game.engine.getHeight()) {
-            TileType t = TileType.fromId(game.engine.getTile(tileX, tileY));
-
-            // 4. Calculate coordinates tracking the actual window resolution dimensions
-            float mouseX = screenX + 16;
-            float mouseY = com.badlogic.gdx.Gdx.graphics.getHeight() - screenY + 16;
-
-            // 5. Render using your high-visibility UI text style via TextUtil
-            font.setColor(1f, 0.85f, 0.2f, 0.8f);
-            TextUtil.drawOutlined(
-                font,
-                batch,
-                t.name + " (" + tileX + ", " + tileY + ")",
-                mouseX,
-                mouseY
-            );
-            font.setColor(1f, 1f, 1f, 1f); // Reset font color back to standard white
-        }
 
         batch.setProjectionMatrix(game.engine.getCamera().combined);
     }
@@ -295,6 +268,22 @@ public class OverlayRenderer {
         font.draw(batch, text, bx + 12, by + 18);
     }
 
+    /**
+     * Vertical space this category's button + (if open) its dropdown
+     * consumes, before the next category's button starts. Used by both
+     * drawSidebar and hitTest so they can never disagree about layout --
+     * the exact bug that caused the earlier sidebar click misalignment.
+     */
+    private int categorySpacing(BuildCategory cat) {
+        int spacing = 80; // base per-category slot, matches original fixed layout
+
+        if (cat == openCategory) {
+            spacing += entries.get(cat).size() * 40; // one row per dropdown entry
+        }
+
+        return spacing;
+    }
+
     private void drawSidebar(SpriteBatch batch) {
         int panelWidth = 120;
         int x = 0;
@@ -313,7 +302,7 @@ public class OverlayRenderer {
 
             if (open) drawCategoryContents(batch, cat, x + 10, buttonY - 40);
 
-            buttonY -= 80;
+            buttonY -= categorySpacing(cat);
         }
     }
 
@@ -395,7 +384,7 @@ public class OverlayRenderer {
                         entryY -= 40;
                     }
                 }
-                buttonY -= 80;
+                buttonY -= categorySpacing(cat);
             }
             return UIResult.none();
         }
