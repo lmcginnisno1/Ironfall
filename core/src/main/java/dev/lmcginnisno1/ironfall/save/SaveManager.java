@@ -51,8 +51,16 @@ public class SaveManager {
         this.game = game;
     }
 
-    /** Desktop: ~/.ironfall/world.sav. Android: app-private storage. */
+    /**
+     * Desktop: ~/.ironfall/world.sav. Android: app-private storage.
+     * Launching with -Dironfall.saveDir=&lt;folder&gt; uses that folder instead,
+     * so test runs never touch a player's real save.
+     */
     public FileHandle saveFile() {
+        String override = System.getProperty("ironfall.saveDir");
+        if (override != null && !override.isBlank()) {
+            return Gdx.files.absolute(override).child("world.sav");
+        }
         if (Gdx.app.getType() == Application.ApplicationType.Desktop) {
             return Gdx.files.external(".ironfall/world.sav");
         }

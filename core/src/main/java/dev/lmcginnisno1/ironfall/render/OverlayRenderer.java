@@ -2,6 +2,7 @@ package dev.lmcginnisno1.ironfall.render;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
@@ -62,7 +63,8 @@ public class OverlayRenderer {
 
         this.entries = Map.of(
             BuildCategory.MINING, List.of(
-                new BuildEntry("Basic Miner", Assets.basicMiner, BasicMiner.COST, () -> new BasicMiner(0,0, game.engine))
+                new BuildEntry("Basic Miner", Assets.basicMiner, BasicMiner.COST, () -> new BasicMiner(0,0, game.engine)),
+                new BuildEntry("Electric Miner", Assets.electricMiner, ElectricMiner.COST, () -> new ElectricMiner(0,0, game.engine))
             ),
             BuildCategory.TRANSPORT, List.of(
                 new BuildEntry("Conveyor", Assets.conveyorUp, Conveyor.COST, () -> new Conveyor(0,0, Conveyor.Direction.UP)),
@@ -70,6 +72,10 @@ public class OverlayRenderer {
             ),
             BuildCategory.PROCESSING, List.of(
                 new BuildEntry("Smelter", Assets.smelter, Smelter.COST, () -> new Smelter(0,0))
+            ),
+            BuildCategory.POWER, List.of(
+                new BuildEntry("Generator", Assets.combustionGenerator, CombustionGenerator.COST, () -> new CombustionGenerator(0,0)),
+                new BuildEntry("Power Node", Assets.powerNode, PowerNode.COST, () -> new PowerNode(0,0))
             )
         );
     }
@@ -83,6 +89,8 @@ public class OverlayRenderer {
         Building sel = selection.getSelected();
         if (sel instanceof Core core) {
             drawCoreInventory(batch, core);
+        } else if (sel != null) {
+            drawInfoPanel(batch, sel);
         }
 
         drawHUD(batch);
@@ -305,6 +313,42 @@ public class OverlayRenderer {
             buttonY -= categorySpacing(cat);
         }
     }
+
+    /** Small status box beside a selected building, from its infoLines(). First line is the title. */
+    private void drawInfoPanel(SpriteBatch batch, Building b) {
+        List<String> lines = b.infoLines();
+        if (lines.isEmpty()) return;
+
+        float maxW = 0;
+        for (String line : lines) {
+            infoLayout.setText(font, line);
+            maxW = Math.max(maxW, infoLayout.width);
+        }
+        int lineH = 18;
+        int w = (int) maxW + 20;
+        int h = lines.size() * lineH + 12;
+
+        // Anchor to the building's top-right corner, kept on screen.
+        Vector3 screen = game.engine.getCamera().project(new Vector3(
+            (b.x + b.width) * TileEngine.TILE_SIZE, (b.y + b.height) * TileEngine.TILE_SIZE, 0));
+        int left = (int) Math.min(screen.x + 12, game.screenWidth - w - 8);
+        int top = (int) Math.max(Math.min(screen.y, game.screenHeight - 60), h + 8);
+
+        batch.setColor(0f, 0f, 0f, 0.7f);
+        batch.draw(Assets.whitePixel, left, top - h, w, h);
+        batch.setColor(1f, 1f, 1f, 1f);
+
+        int y = top - 8;
+        for (int i = 0; i < lines.size(); i++) {
+            if (i == 0) font.setColor(1f, 0.85f, 0.2f, 1f);
+            else font.setColor(1f, 1f, 1f, 1f);
+            font.draw(batch, lines.get(i), left + 10, y);
+            y -= lineH;
+        }
+        font.setColor(1f, 1f, 1f, 1f);
+    }
+
+    private final GlyphLayout infoLayout = new GlyphLayout();
 
     private void drawHUD(SpriteBatch batch) {
         float hudWidth = game.hudCamera.viewportWidth;

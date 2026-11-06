@@ -117,8 +117,8 @@ public class InputController {
             }
         }
 
-        // Deselect single selection on Right Click
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+        // Deselect single selection on Right Click or Esc
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             selection.clearSelection();
             game.mode = GameMode.NORMAL;
         }

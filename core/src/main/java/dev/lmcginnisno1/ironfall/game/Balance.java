@@ -65,6 +65,25 @@ public final class Balance {
     public static final int SPLITTER_COST = 20;                // credits, flat (not per-tile like Conveyor)
     public static final int SPLITTER_MAX_BUFFER = 4;           // items queued internally awaiting a clear output
 
+    // --- Power (all rates in power units per second) ---
+
+    // Combustion generator: burns one coal per COAL_BURN_TIME seconds, but
+    // only while something on its grid wants power.
+    public static final int GENERATOR_COST = 100;              // credits
+    public static final float GENERATOR_OUTPUT = 60f;          // power/sec while burning
+    public static final float GENERATOR_COAL_BURN_TIME = 2.0f; // seconds per coal (0.5 coal/sec)
+    public static final int GENERATOR_MAX_COAL = 10;           // coal buffered inside
+
+    // Power node: links every power building within range to one grid.
+    public static final int POWER_NODE_COST = 15;              // credits
+    public static final float POWER_NODE_RANGE = 6f;           // tiles, from node centre to nearest edge of target
+
+    // Electric miner: tier-2, 3x3, faster per ore tile than the Basic Miner.
+    // One generator (60/sec) runs two of these at full speed.
+    public static final int ELECTRIC_MINER_COST = 150;         // credits
+    public static final float ELECTRIC_MINER_RATE_PER_ORE_TILE = 0.3f; // ore/sec per ore tile at full power
+    public static final float ELECTRIC_MINER_POWER_USE = 30f;  // power/sec while mining
+
     // --- Upgrades: shared ---
 
     public static final int UPGRADE_MAX_LEVEL = 5;

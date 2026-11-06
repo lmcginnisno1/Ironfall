@@ -20,6 +20,9 @@ public class Assets {
     public static TextureRegion core;
     public static TextureRegion basicMiner;
     public static TextureRegion smelter;
+    public static TextureRegion combustionGenerator;
+    public static TextureRegion powerNode;
+    public static TextureRegion electricMiner;
     public static TextureRegion whitePixel;
 
     // Every texture we create, so dispose() can't miss one.
@@ -47,6 +50,9 @@ public class Assets {
         core = sprite("buildings/core.png");
         basicMiner = sprite("buildings/miner.png");
         smelter = sprite("buildings/smelter.png");
+        combustionGenerator = sprite("buildings/combustion_generator.png");
+        powerNode = sprite("buildings/power_node.png");
+        electricMiner = sprite("buildings/electric_miner.png");
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE);

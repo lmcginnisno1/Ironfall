@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 
 import dev.lmcginnisno1.ironfall.game.Upgrades;
+import dev.lmcginnisno1.ironfall.power.PowerSystem;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ public class BuildingManager {
     private final HashMap<Long, Building> grid = new HashMap<>();
 
     private final Upgrades upgrades = new Upgrades();
+    private final PowerSystem power = new PowerSystem(this);
 
     private final int width, height;
 
@@ -48,6 +50,10 @@ public class BuildingManager {
         register(core);
     }
 
+    public PowerSystem getPower() {
+        return power;
+    }
+
     public Upgrades getUpgrades() {
         return upgrades;
     }
@@ -64,6 +70,7 @@ public class BuildingManager {
     // Shared registration logic
     private void register(Building b) {
         buildings.add(b);
+        power.markDirty();
         b.setWorld(this);
 
         for (int ix = b.x; ix < b.x + b.width; ix++) {
@@ -81,6 +88,7 @@ public class BuildingManager {
         if (b instanceof Core) return false;
 
         buildings.remove(b);
+        power.markDirty();
 
         for (int ix = b.x; ix < b.x + b.width; ix++) {
             for (int iy = b.y; iy < b.y + b.height; iy++) {
@@ -95,12 +103,15 @@ public class BuildingManager {
     public void clear() {
         buildings.clear();
         grid.clear();
+        power.markDirty();
         upgrades.minerSpeedLevel = 0;
         upgrades.beltSpeedLevel = 0;
         upgrades.storageCapacityLevel = 0;
     }
 
     public void update(float delta) {
+        // Power first, so every building sees this frame's satisfaction.
+        power.update();
         for (Building b : buildings) b.update(delta);
     }
 

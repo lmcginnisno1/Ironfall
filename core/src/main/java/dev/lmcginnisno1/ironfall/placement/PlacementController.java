@@ -8,7 +8,10 @@ import com.badlogic.gdx.math.Vector2;
 
 import dev.lmcginnisno1.ironfall.IronfallGame;
 import dev.lmcginnisno1.ironfall.buildings.*;
+import dev.lmcginnisno1.ironfall.game.Balance;
 import dev.lmcginnisno1.ironfall.game.GameMode;
+import dev.lmcginnisno1.ironfall.power.PowerBlock;
+import dev.lmcginnisno1.ironfall.render.DrawUtil;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.tiles.TileType;
 
@@ -136,8 +139,8 @@ public class PlacementController {
         boolean canAfford = game.credits >= prototype.cost;
         valid &= canAfford;
 
-        // Miner-specific validation
-        if (prototype instanceof BasicMiner) {
+        // Miners must sit on a single type of ore
+        if (prototype.requiresOre()) {
             valid &= oreCheck(px, py, prototype.width, prototype.height);
         }
 
@@ -173,9 +176,13 @@ public class PlacementController {
         boolean valid = buildings.canPlace(px, py, prototype.width, prototype.height);
         valid &= game.credits >= prototype.cost;
 
-        // Miner-specific validation
-        if (prototype instanceof BasicMiner) {
+        // Miners must sit on a single type of ore
+        if (prototype.requiresOre()) {
             valid &= oreCheck(px, py, prototype.width, prototype.height);
+        }
+
+        if (prototype instanceof PowerNode) {
+            renderNodeRangePreview(batch, px, py);
         }
 
         batch.setColor(valid ? 0f : 1f, valid ? 1f : 0f, 0f, 0.5f);
@@ -186,6 +193,22 @@ public class PlacementController {
             prototype.width * 16,
             prototype.height * 16
         );
+        batch.setColor(1f, 1f, 1f, 1f);
+    }
+
+    /** Shows a node's range and the power buildings it would link to if placed at (nx, ny). */
+    private void renderNodeRangePreview(SpriteBatch batch, int nx, int ny) {
+        float cx = (nx + 0.5f) * 16, cy = (ny + 0.5f) * 16;
+
+        batch.setColor(1f, 0.85f, 0.2f, 0.5f);
+        DrawUtil.dottedCircle(batch, cx, cy, Balance.POWER_NODE_RANGE * 16, 64, 2f);
+
+        batch.setColor(1f, 0.85f, 0.2f, 0.6f);
+        for (Building b : buildings.getBuildings()) {
+            if (b instanceof PowerBlock && PowerNode.inRange(nx, ny, b.x, b.y, b.width, b.height)) {
+                DrawUtil.line(batch, cx, cy, DrawUtil.centerX(b), DrawUtil.centerY(b), 1.5f);
+            }
+        }
         batch.setColor(1f, 1f, 1f, 1f);
     }
 

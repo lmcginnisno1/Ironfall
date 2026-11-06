@@ -7,6 +7,7 @@ import dev.lmcginnisno1.ironfall.items.Item;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 public abstract class Building {
 
@@ -63,6 +64,29 @@ public abstract class Building {
         int fromX = Math.max(x, Math.min(tx, x + width - 1));
         int fromY = Math.max(y, Math.min(ty, y + height - 1));
         return acceptor.acceptItem(item, fromX, fromY);
+    }
+
+    /** Offers an item to each tile touching an edge of this building (no diagonals) until one takes it. */
+    protected boolean pushItemToAnyNeighbour(Item item) {
+        for (int tx = x; tx < x + width; tx++) {
+            if (pushItem(item, tx, y - 1) || pushItem(item, tx, y + height)) return true;
+        }
+        for (int ty = y; ty < y + height; ty++) {
+            if (pushItem(item, x - 1, ty) || pushItem(item, x + width, ty)) return true;
+        }
+        return false;
+    }
+
+    // --- Placement and UI ---
+
+    /** True for buildings that must sit on at least one tile of a single ore type (miners). */
+    public boolean requiresOre() {
+        return false;
+    }
+
+    /** Status lines shown in a small panel when this building is selected. Empty means no panel. */
+    public List<String> infoLines() {
+        return List.of();
     }
 
     // --- Saving ---

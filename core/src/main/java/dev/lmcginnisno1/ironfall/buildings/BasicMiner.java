@@ -108,6 +108,11 @@ public class BasicMiner extends Building {
     }
 
     @Override
+    public boolean requiresOre() {
+        return true;
+    }
+
+    @Override
     public void writeState(DataOutputStream out) throws IOException {
         out.writeFloat(timer);
         SaveIO.writeItemType(out, buffer == null ? null : buffer.type());

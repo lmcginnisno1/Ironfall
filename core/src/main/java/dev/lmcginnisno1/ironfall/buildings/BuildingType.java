@@ -11,7 +11,10 @@ public enum BuildingType {
     BASIC_MINER("basic_miner", (x, y, facing, engine) -> new BasicMiner(x, y, engine)),
     CONVEYOR("conveyor", (x, y, facing, engine) -> new Conveyor(x, y, facing)),
     SPLITTER("splitter", (x, y, facing, engine) -> new Splitter(x, y, facing)),
-    SMELTER("smelter", (x, y, facing, engine) -> new Smelter(x, y));
+    SMELTER("smelter", (x, y, facing, engine) -> new Smelter(x, y)),
+    COMBUSTION_GENERATOR("combustion_generator", (x, y, facing, engine) -> new CombustionGenerator(x, y)),
+    POWER_NODE("power_node", (x, y, facing, engine) -> new PowerNode(x, y)),
+    ELECTRIC_MINER("electric_miner", (x, y, facing, engine) -> new ElectricMiner(x, y, engine));
 
     @FunctionalInterface
     public interface Factory {

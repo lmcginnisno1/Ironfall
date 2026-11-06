@@ -2,7 +2,10 @@ package dev.lmcginnisno1.ironfall.render;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
+import dev.lmcginnisno1.ironfall.buildings.Building;
 import dev.lmcginnisno1.ironfall.buildings.Conveyor;
+import dev.lmcginnisno1.ironfall.buildings.ElectricMiner;
+import dev.lmcginnisno1.ironfall.power.PowerSystem;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.IronfallGame;
 import dev.lmcginnisno1.ironfall.tiles.TileEngine;
@@ -25,10 +28,44 @@ public class WorldRenderer {
 
         buildings.render(batch);
         renderConveyorItems(batch);
+        renderPowerLinks(batch);
+        renderPowerWarnings(batch);
 
         if (game.showGrid) {
             drawGrid(batch);
         }
+    }
+
+    /** Lasers from each power node to the buildings it links. */
+    private void renderPowerLinks(SpriteBatch batch) {
+        for (PowerSystem.Link link : buildings.getPower().getLinks()) {
+            float x1 = DrawUtil.centerX(link.from()), y1 = DrawUtil.centerY(link.from());
+            float x2 = DrawUtil.centerX(link.to()), y2 = DrawUtil.centerY(link.to());
+
+            batch.setColor(0.55f, 0.4f, 0.05f, 0.55f);
+            DrawUtil.line(batch, x1, y1, x2, y2, 3f);
+            batch.setColor(1f, 0.85f, 0.3f, 0.9f);
+            DrawUtil.line(batch, x1, y1, x2, y2, 1f);
+        }
+        batch.setColor(Color.WHITE);
+    }
+
+    /** A small marker on powered buildings that aren't getting enough power: red = none, orange = some. */
+    private void renderPowerWarnings(SpriteBatch batch) {
+        for (Building b : buildings.getBuildings()) {
+            if (!(b instanceof ElectricMiner miner) || !miner.isPowerStarved()) continue;
+
+            float size = 7f;
+            float x = (b.x + b.width) * TileEngine.TILE_SIZE - size - 3;
+            float y = (b.y + b.height) * TileEngine.TILE_SIZE - size - 3;
+
+            batch.setColor(0.1f, 0.1f, 0.1f, 1f);
+            batch.draw(Assets.whitePixel, x - 1, y - 1, size + 2, size + 2);
+            if (miner.satisfaction() <= 0f) batch.setColor(0.9f, 0.2f, 0.2f, 1f);
+            else batch.setColor(1f, 0.6f, 0.1f, 1f);
+            batch.draw(Assets.whitePixel, x, y, size, size);
+        }
+        batch.setColor(Color.WHITE);
     }
 
     private void drawGrid(SpriteBatch batch) {
