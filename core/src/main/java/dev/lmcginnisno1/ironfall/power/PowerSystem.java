@@ -40,20 +40,66 @@ public class PowerSystem {
         return links;
     }
 
-    public void update() {
+    public void update(float delta) {
         if (dirty) rebuild();
 
         for (PowerGrid grid : grids) {
             grid.produced = 0f;
             grid.demand = 0f;
+            grid.stored = 0f;
+            grid.capacity = 0f;
             for (PowerBlock b : grid.members) {
                 grid.produced += b.powerProduction();
                 grid.demand += b.powerDemand();
+                if (b instanceof PowerStorage s) {
+                    grid.stored += s.stored();
+                    grid.capacity += s.capacity();
+                }
             }
+
+            // Work in energy for this frame: surplus charges batteries,
+            // a shortfall is covered from them as far as they can.
+            float supply = grid.produced * delta;
+            float need = grid.demand * delta;
+            if (supply >= need) {
+                charge(grid, supply - need);
+                grid.satisfaction = 1f;
+            } else {
+                float drawn = discharge(grid, need - supply);
+                grid.satisfaction = (supply + drawn) / need;
+            }
+
             for (PowerBlock b : grid.members) {
                 b.setPowerGrid(grid);
             }
         }
+    }
+
+    /** Spreads {@code energy} over the grid's batteries in proportion to their free space. */
+    private static void charge(PowerGrid grid, float energy) {
+        float free = grid.capacity - grid.stored;
+        if (energy <= 0f || free <= 0f) return;
+        float fraction = Math.min(1f, energy / free);
+        for (PowerBlock b : grid.members) {
+            if (b instanceof PowerStorage s) {
+                s.setStored(s.stored() + (s.capacity() - s.stored()) * fraction);
+            }
+        }
+        grid.stored += Math.min(energy, free);
+    }
+
+    /** Takes up to {@code energy} from the grid's batteries in proportion to their charge. Returns what was taken. */
+    private static float discharge(PowerGrid grid, float energy) {
+        if (energy <= 0f || grid.stored <= 0f) return 0f;
+        float fraction = Math.min(1f, energy / grid.stored);
+        for (PowerBlock b : grid.members) {
+            if (b instanceof PowerStorage s) {
+                s.setStored(s.stored() * (1f - fraction));
+            }
+        }
+        float taken = Math.min(energy, grid.stored);
+        grid.stored -= taken;
+        return taken;
     }
 
     // ---------------------------------------------------------------

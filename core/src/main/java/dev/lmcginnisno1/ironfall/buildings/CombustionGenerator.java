@@ -15,7 +15,8 @@ import java.util.List;
 /**
  * 2x2 generator fed with coal from belts or miners. Burns one coal at a time
  * and produces power while burning, but only starts a new piece of coal when
- * something on its grid needs power, so an idle grid doesn't waste fuel.
+ * something on its grid needs power or a battery has room, so an idle grid
+ * doesn't waste fuel.
  */
 public class CombustionGenerator extends Building implements ItemAcceptor, PowerBlock {
 
@@ -41,7 +42,7 @@ public class CombustionGenerator extends Building implements ItemAcceptor, Power
         if (burnTimer > 0f) burnTimer -= delta;
 
         if (burnTimer <= 0f) {
-            boolean wanted = grid != null && grid.demand() > 0f;
+            boolean wanted = grid != null && grid.wantsPower();
             if (coal > 0 && wanted) {
                 coal--;
                 // Carry over any overshoot so the burn rate stays exact.

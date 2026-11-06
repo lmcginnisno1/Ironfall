@@ -8,8 +8,11 @@ public class PowerGrid {
 
     final List<PowerBlock> members = new ArrayList<>();
 
-    float produced; // per second
-    float demand;   // per second
+    float produced;           // per second
+    float demand;             // per second
+    float stored;             // energy in this grid's batteries
+    float capacity;           // total battery capacity
+    float satisfaction = 1f;  // fraction of demand met this frame, batteries included
 
     public float produced() {
         return produced;
@@ -19,10 +22,22 @@ public class PowerGrid {
         return demand;
     }
 
-    /** Fraction of demand being met, 0..1. A grid with no demand counts as fully satisfied. */
+    public float stored() {
+        return stored;
+    }
+
+    public float capacity() {
+        return capacity;
+    }
+
+    /** Fraction of demand being met this frame (batteries included), 0..1. No demand counts as fully met. */
     public float satisfaction() {
-        if (demand <= 0f) return 1f;
-        return Math.min(1f, produced / demand);
+        return satisfaction;
+    }
+
+    /** True if anything on this grid could use more power: a consumer, or a battery that isn't full. */
+    public boolean wantsPower() {
+        return demand > 0f || stored < capacity - 0.01f;
     }
 
     public int size() {
@@ -32,7 +47,11 @@ public class PowerGrid {
     /** One-line summary for info panels, e.g. "Grid: 60 made / 30 used per s (100%)". */
     public static String describe(PowerGrid grid) {
         if (grid == null) return "Grid: not connected";
-        return "Grid: " + Math.round(grid.produced) + " made / " + Math.round(grid.demand)
+        String line = "Grid: " + Math.round(grid.produced) + " made / " + Math.round(grid.demand)
             + " used per s (" + Math.round(grid.satisfaction() * 100f) + "%)";
+        if (grid.capacity > 0f) {
+            line += ", stored " + Math.round(grid.stored) + "/" + Math.round(grid.capacity);
+        }
+        return line;
     }
 }

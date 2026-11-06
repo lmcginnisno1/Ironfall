@@ -78,6 +78,11 @@ public final class Balance {
     public static final int POWER_NODE_COST = 15;              // credits
     public static final float POWER_NODE_RANGE = 6f;           // tiles, from node centre to nearest edge of target
 
+    // Battery: stores a grid's surplus and covers shortfalls. 1000 runs one
+    // Electric Miner for about 33 seconds.
+    public static final int BATTERY_COST = 40;                 // credits
+    public static final float BATTERY_CAPACITY = 1000f;        // power units
+
     // Electric miner: tier-2, 3x3, faster per ore tile than the Basic Miner.
     // One generator (60/sec) runs two of these at full speed.
     public static final int ELECTRIC_MINER_COST = 150;         // credits

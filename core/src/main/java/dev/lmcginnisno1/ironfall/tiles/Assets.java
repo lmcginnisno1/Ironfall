@@ -22,6 +22,7 @@ public class Assets {
     public static TextureRegion smelter;
     public static TextureRegion combustionGenerator;
     public static TextureRegion powerNode;
+    public static TextureRegion battery;
     public static TextureRegion electricMiner;
     public static TextureRegion whitePixel;
 
@@ -52,6 +53,7 @@ public class Assets {
         smelter = sprite("buildings/smelter.png");
         combustionGenerator = sprite("buildings/combustion_generator.png");
         powerNode = sprite("buildings/power_node.png");
+        battery = sprite("buildings/battery.png");
         electricMiner = sprite("buildings/electric_miner.png");
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);

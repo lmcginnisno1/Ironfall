@@ -111,7 +111,7 @@ public class BuildingManager {
 
     public void update(float delta) {
         // Power first, so every building sees this frame's satisfaction.
-        power.update();
+        power.update(delta);
         for (Building b : buildings) b.update(delta);
     }
 

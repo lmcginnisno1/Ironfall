@@ -75,7 +75,8 @@ public class OverlayRenderer {
             ),
             BuildCategory.POWER, List.of(
                 new BuildEntry("Generator", Assets.combustionGenerator, CombustionGenerator.COST, () -> new CombustionGenerator(0,0)),
-                new BuildEntry("Power Node", Assets.powerNode, PowerNode.COST, () -> new PowerNode(0,0))
+                new BuildEntry("Power Node", Assets.powerNode, PowerNode.COST, () -> new PowerNode(0,0)),
+                new BuildEntry("Battery", Assets.battery, Battery.COST, () -> new Battery(0,0))
             )
         );
     }
