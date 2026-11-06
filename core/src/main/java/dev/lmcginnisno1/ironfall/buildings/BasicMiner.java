@@ -5,6 +5,11 @@ import dev.lmcginnisno1.ironfall.items.ItemType;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.tiles.TileEngine;
 import dev.lmcginnisno1.ironfall.game.Balance;
+import dev.lmcginnisno1.ironfall.save.SaveIO;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 public class BasicMiner extends Building {
 
@@ -82,21 +87,10 @@ public class BasicMiner extends Building {
             int tx = x + o[0];
             int ty = y + o[1];
 
-            Building b = world.getAt(tx, ty);
-
-            if (b instanceof Conveyor c && c.canAcceptAnotherItem()) {
-                c.addIncomingItem(buffer);
-                buffer = null;
-                return;
-            }
-
-            // Also allow feeding straight into an adjacent Core, no belt
-            // required — mirrors how WorldGenerator already favors placing
-            // the Core near ore, so touching placements should just work.
-            // If the Core is at its storage cap for this resource, acceptItem
-            // returns false and the miner simply stays full (backpressure),
-            // same as when an adjacent conveyor is jammed.
-            if (b instanceof Core core && core.acceptItem(buffer)) {
+            // Any neighbour that takes items works: a belt, or the Core
+            // directly. If nothing has room, the miner stays full
+            // (backpressure) and tries again next frame.
+            if (pushItem(buffer, tx, ty)) {
                 buffer = null;
                 return;
             }
@@ -106,5 +100,23 @@ public class BasicMiner extends Building {
     @Override
     public Building copyAt(int x, int y) {
         return new BasicMiner(x, y, engine);
+    }
+
+    @Override
+    public BuildingType type() {
+        return BuildingType.BASIC_MINER;
+    }
+
+    @Override
+    public void writeState(DataOutputStream out) throws IOException {
+        out.writeFloat(timer);
+        SaveIO.writeItemType(out, buffer == null ? null : buffer.type());
+    }
+
+    @Override
+    public void readState(DataInputStream in) throws IOException {
+        timer = in.readFloat();
+        ItemType type = SaveIO.readItemType(in);
+        buffer = type == null ? null : new Item(type);
     }
 }

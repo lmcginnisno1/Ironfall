@@ -4,9 +4,15 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.items.Item;
+import dev.lmcginnisno1.ironfall.items.ItemType;
 import dev.lmcginnisno1.ironfall.game.Balance;
+import dev.lmcginnisno1.ironfall.save.SaveIO;
 
-public class Conveyor extends Building {
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
+public class Conveyor extends Building implements ItemAcceptor {
 
     public enum Direction { UP, DOWN, LEFT, RIGHT }
     public final Direction direction;
@@ -43,17 +49,39 @@ public class Conveyor extends Building {
         };
     }
 
-    // Called by upstream belts
-    public boolean canAcceptAnotherItem() {
+    private boolean canAcceptAnotherItem() {
         if (items.size == 0) return true;
         return items.peek().progress >= SPACING;
     }
 
-    public void addIncomingItem(Item item) {
+    @Override
+    public boolean acceptItem(Item item, int fromX, int fromY) {
+        // Refuse items from the tile this belt feeds into, so a belt pointing
+        // at a building never takes that building's output and jams.
+        if (fromX == x + dx(direction) && fromY == y + dy(direction)) return false;
+        if (!canAcceptAnotherItem()) return false;
+
         MovingItem m = new MovingItem();
         m.item = item;
         m.progress = 0f;
         items.add(m);
+        return true;
+    }
+
+    public static int dx(Direction d) {
+        return switch (d) {
+            case LEFT -> -1;
+            case RIGHT -> 1;
+            default -> 0;
+        };
+    }
+
+    public static int dy(Direction d) {
+        return switch (d) {
+            case DOWN -> -1;
+            case UP -> 1;
+            default -> 0;
+        };
     }
 
     @Override
@@ -87,48 +115,9 @@ public class Conveyor extends Building {
     }
 
     private void tryMoveForward(MovingItem m) {
-        int nx = x, ny = y;
-
-        switch (direction) {
-            case UP -> ny++;
-            case DOWN -> ny--;
-            case LEFT -> nx--;
-            case RIGHT -> nx++;
-        }
-
-        Building b = world.getAt(nx, ny);
-
-        // Move to next conveyor
-        if (b instanceof Conveyor next) {
-            if (next.canAcceptAnotherItem()) {
-                next.addIncomingItem(m.item);
-                items.removeValue(m, true);
-                return;
-            }
-        }
-
-        // Move into core
-        if (b instanceof Core core) {
-            if (core.acceptItem(m.item)) {
-                items.removeValue(m, true);
-                return;
-            }
-        }
-
-        // Move into a smelter
-        if (b instanceof Smelter smelter) {
-            if (smelter.acceptItem(m.item)) {
-                items.removeValue(m, true);
-                return;
-            }
-        }
-
-        // Move into a splitter (passes the source tile x, y and target tile nx, ny)
-        if (b instanceof Splitter splitter) {
-            if (splitter.acceptItem(m.item, x, y, nx, ny)) {
-                items.removeValue(m, true);
-                return;
-            }
+        if (pushItem(m.item, x + dx(direction), y + dy(direction))) {
+            items.removeValue(m, true);
+            return;
         }
 
         // Blocked → wait at edge
@@ -143,5 +132,40 @@ public class Conveyor extends Building {
     @Override
     public Building copyAt(int x, int y) {
         return new Conveyor(x, y, this.direction);
+    }
+
+    @Override
+    public BuildingType type() {
+        return BuildingType.CONVEYOR;
+    }
+
+    @Override
+    public Direction facing() {
+        return direction;
+    }
+
+    @Override
+    public void writeState(DataOutputStream out) throws IOException {
+        out.writeInt(items.size);
+        for (MovingItem m : items) {
+            SaveIO.writeItemType(out, m.item.type());
+            out.writeFloat(m.progress);
+        }
+    }
+
+    @Override
+    public void readState(DataInputStream in) throws IOException {
+        items.clear();
+        int n = in.readInt();
+        for (int i = 0; i < n; i++) {
+            ItemType type = SaveIO.readItemType(in);
+            float progress = in.readFloat();
+            if (type == null) continue;
+
+            MovingItem m = new MovingItem();
+            m.item = new Item(type);
+            m.progress = progress;
+            items.add(m);
+        }
     }
 }

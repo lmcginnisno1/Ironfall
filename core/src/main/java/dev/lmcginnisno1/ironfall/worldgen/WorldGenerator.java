@@ -5,46 +5,53 @@ import dev.lmcginnisno1.ironfall.buildings.BuildingManager;
 import dev.lmcginnisno1.ironfall.tiles.TileEngine;
 import dev.lmcginnisno1.ironfall.tiles.TileType;
 
+import java.util.Random;
+
 public class WorldGenerator {
 
-    public static void generate(TileEngine engine, BuildingManager buildings) {
+    /**
+     * Fills the tile grid and places the Core. The same seed always gives
+     * the same map, as long as the generation code below doesn't change.
+     */
+    public static void generate(TileEngine engine, BuildingManager buildings, long seed) {
+        Random rng = new Random(seed);
         int width = engine.getWidth();
         int height = engine.getHeight();
 
-        generateTerrain(engine, width, height);
-        generateVeins(engine, width, height);
+        generateTerrain(engine, rng, width, height);
+        generateVeins(engine, rng, width, height);
 
         Vector2 corePos = findCoreLocation(engine);
         buildings.placeCore((int) corePos.x, (int) corePos.y);
     }
 
-    private static void generateTerrain(TileEngine engine, int width, int height) {
+    private static void generateTerrain(TileEngine engine, Random rng, int width, int height) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                double noise = Math.random();
+                double noise = rng.nextDouble();
                 engine.setTile(x, y, noise < 0.85 ? TileType.DIRT.id : TileType.SAND.id);
             }
         }
     }
 
-    private static void generateVeins(TileEngine engine, int width, int height) {
-        generateVein(engine, TileType.COAL.id, width, height, 50, 60);
-        generateVein(engine, TileType.IRON.id, width, height, 30, 60);
-        generateVein(engine, TileType.COPPER.id, width, height, 50, 60);
-        generateVein(engine, TileType.STONE.id, width, height, 100, 100);
+    private static void generateVeins(TileEngine engine, Random rng, int width, int height) {
+        generateVein(engine, rng, TileType.COAL.id, width, height, 50, 60);
+        generateVein(engine, rng, TileType.IRON.id, width, height, 30, 60);
+        generateVein(engine, rng, TileType.COPPER.id, width, height, 50, 60);
+        generateVein(engine, rng, TileType.STONE.id, width, height, 100, 100);
     }
 
-    private static void generateVein(TileEngine engine, int tileId, int width, int height, int seedCount, int veinLength) {
+    private static void generateVein(TileEngine engine, Random rng, int tileId, int width, int height, int seedCount, int veinLength) {
         for (int i = 0; i < seedCount; i++) {
-            int x = (int) (Math.random() * width);
-            int y = (int) (Math.random() * height);
+            int x = rng.nextInt(width);
+            int y = rng.nextInt(height);
 
             for (int v = 0; v < veinLength; v++) {
                 TileType t = TileType.fromId(engine.getTile(x, y));
                 if (t == TileType.DIRT || t == TileType.SAND)
                     engine.setTile(x, y, tileId);
 
-                int dir = (int) (Math.random() * 4);
+                int dir = rng.nextInt(4);
                 switch (dir) {
                     case 0 -> x++;
                     case 1 -> x--;

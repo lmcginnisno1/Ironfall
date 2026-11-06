@@ -69,6 +69,15 @@ public class PlacementController {
         game.mode = GameMode.PLACING_GENERIC;
     }
 
+    /** Drops whatever is being placed, including a half-finished conveyor drag. */
+    public void cancel() {
+        prototype = null;
+        draggingConveyor = false;
+        cachedPath = null;
+        cachedEndX = -1;
+        cachedEndY = -1;
+    }
+
     public void update() {
         boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         boolean leftJustPressed = Gdx.input.isButtonJustPressed(Input.Buttons.LEFT);

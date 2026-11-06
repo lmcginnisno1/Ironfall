@@ -27,6 +27,17 @@ public class InputController {
             game.showGrid = !game.showGrid;
         }
 
+        // Quick save / load. Loading replaces the world, so stop handling
+        // input for this frame afterwards.
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+            game.saveGame(true);
+            return;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+            game.loadGame();
+            return;
+        }
+
         switch (game.mode) {
             case NORMAL -> handleNormalMode();
             case SELECTING_SINGLE -> handleSingleSelectMode();
@@ -36,6 +47,13 @@ public class InputController {
     }
 
     private void handleNormalMode() {
+        // Esc only opens the pause menu from normal mode; in other modes it
+        // cancels the current action first.
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.openPauseMenu();
+            return;
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.X)) {
             game.mode = GameMode.DELETE_MODE;
             selection.clearSelection();

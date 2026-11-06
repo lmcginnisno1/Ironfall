@@ -4,11 +4,15 @@ import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.items.Item;
 import dev.lmcginnisno1.ironfall.items.ItemType;
 import dev.lmcginnisno1.ironfall.game.Balance;
+import dev.lmcginnisno1.ironfall.save.SaveIO;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Core extends Building {
+public class Core extends Building implements ItemAcceptor {
 
     private final Map<ItemType, Integer> inventory = new HashMap<>();
 
@@ -20,7 +24,8 @@ public class Core extends Building {
     }
 
     /** Returns false (accepting nothing) if this resource is already at its storage cap. */
-    public boolean acceptItem(Item item) {
+    @Override
+    public boolean acceptItem(Item item, int fromX, int fromY) {
         ItemType type = item.type();
         int cap = world.getUpgrades().storageCap();
         int have = inventory.getOrDefault(type, 0);
@@ -121,5 +126,22 @@ public class Core extends Building {
     @Override
     public Building copyAt(int x, int y) {
         return new Core(x, y);
+    }
+
+    @Override
+    public BuildingType type() {
+        return BuildingType.CORE;
+    }
+
+    @Override
+    public void writeState(DataOutputStream out) throws IOException {
+        SaveIO.writeItemCounts(out, inventory);
+        SaveIO.writeItemCounts(out, saleQuantities);
+    }
+
+    @Override
+    public void readState(DataInputStream in) throws IOException {
+        SaveIO.readItemCounts(in, inventory);
+        SaveIO.readItemCounts(in, saleQuantities);
     }
 }

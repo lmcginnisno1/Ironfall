@@ -3,9 +3,14 @@ package dev.lmcginnisno1.ironfall.buildings;
 import dev.lmcginnisno1.ironfall.game.Balance;
 import dev.lmcginnisno1.ironfall.items.Item;
 import dev.lmcginnisno1.ironfall.items.ItemType;
+import dev.lmcginnisno1.ironfall.save.SaveIO;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 
-public class Smelter extends Building {
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
+public class Smelter extends Building implements ItemAcceptor {
 
     public static final int COST = Balance.SMELTER_COST;
 
@@ -26,7 +31,8 @@ public class Smelter extends Building {
         super(x, y, 2, 2, Assets.smelter, COST);
     }
 
-    public boolean acceptItem(Item item) {
+    @Override
+    public boolean acceptItem(Item item, int fromX, int fromY) {
         if (item == null) return false;
 
         if (item.type() == ItemType.COAL && coalBuffer < Balance.SMELTER_MAX_BUFFER) {
@@ -105,46 +111,43 @@ public class Smelter extends Building {
                     continue;
                 }
 
-                Building building = world.getAt(checkX, checkY);
-
-                if (building instanceof Core core) {
-                    // Respect the Core's storage cap. If it's full for this
-                    // ingot type, don't give up — keep scanning the rest of
-                    // the perimeter in case a conveyor on another side can
-                    // still take it.
-                    if (core.acceptItem(new Item(ingotType))) {
-                        return true;
-                    }
-                    continue;
-                }
-
-                if (building instanceof Conveyor conveyor) {
-                    if (isConveyorFacingAway(conveyor, checkX, checkY) && conveyor.canAcceptAnotherItem()) {
-                        conveyor.addIncomingItem(new Item(ingotType));
-                        return true;
-                    }
+                // If this neighbour is full (or a belt pointing into the
+                // smelter), keep scanning the rest of the perimeter.
+                if (pushItem(new Item(ingotType), checkX, checkY)) {
+                    return true;
                 }
             }
         }
         return false;
     }
 
-    private boolean isConveyorFacingAway(Conveyor conveyor, int cx, int cy) {
-        int targetX = cx;
-        int targetY = cy;
-
-        switch (conveyor.direction) {
-            case RIGHT -> targetX++; // East
-            case UP -> targetY++; // North
-            case LEFT -> targetX--; // West
-            case DOWN -> targetY--; // South
-        }
-
-        return targetX < x || targetX > x + 1 || targetY < y || targetY > y + 1;
-    }
-
     @Override
     public Building copyAt(int x, int y) {
         return new Smelter(x, y);
+    }
+
+    @Override
+    public BuildingType type() {
+        return BuildingType.SMELTER;
+    }
+
+    @Override
+    public void writeState(DataOutputStream out) throws IOException {
+        out.writeInt(coalBuffer);
+        out.writeInt(ironBuffer);
+        out.writeInt(copperBuffer);
+        out.writeFloat(progress);
+        SaveIO.writeItemType(out, currentTargetOutput);
+        out.writeBoolean(preferCopperNext);
+    }
+
+    @Override
+    public void readState(DataInputStream in) throws IOException {
+        coalBuffer = in.readInt();
+        ironBuffer = in.readInt();
+        copperBuffer = in.readInt();
+        progress = in.readFloat();
+        currentTargetOutput = SaveIO.readItemType(in);
+        preferCopperNext = in.readBoolean();
     }
 }

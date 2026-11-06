@@ -16,7 +16,8 @@ public class CameraController {
     private int lastX, lastY;
     private final int worldWidth, worldHeight;
 
-    public CameraController(OrthographicCamera camera, BooleanSupplier dragEnabled, int worldWidth, int worldHeight) {
+    public CameraController(OrthographicCamera camera, BooleanSupplier dragEnabled, BooleanSupplier zoomEnabled,
+                            int worldWidth, int worldHeight) {
         this.camera = camera;
         this.worldWidth = worldWidth;
         this.worldHeight = worldHeight;
@@ -26,7 +27,7 @@ public class CameraController {
 
             @Override
             public boolean scrolled(float amountX, float amountY) {
-                handleScroll(amountY);
+                if (zoomEnabled.getAsBoolean()) handleScroll(amountY);
                 return true;
             }
 

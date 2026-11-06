@@ -41,6 +41,15 @@ To compile and execute the project locally using the Gradle wrapper:
    Alternatively, you can build and launch the environment directly using:
    ```./gradlew lwjgl3:run```
 
+## Saving
+
+The main menu lets you continue your saved world or start a new one. While playing, press `Esc` for the pause menu (resume, save, return to the main menu, or save and quit).
+
+Your world is also saved automatically every 2 minutes and when you close the game. The save file is `~/.ironfall/world.sav` (on Windows, `C:\Users\<you>\.ironfall\world.sav`).
+
+- `F5`: quick save
+- `F9`: reload the last save
+
 ## Development and Gradle Configuration
 
 This project manages dependencies and build lifecycle automation via Gradle. The wrapper scripts (`gradlew` and `gradlew.bat`) ensure predictable execution environments without requiring a local Gradle install.

@@ -3,8 +3,13 @@ package dev.lmcginnisno1.ironfall.buildings;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import dev.lmcginnisno1.ironfall.game.Balance;
 import dev.lmcginnisno1.ironfall.items.Item;
+import dev.lmcginnisno1.ironfall.items.ItemType;
+import dev.lmcginnisno1.ironfall.save.SaveIO;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayDeque;
 
 /**
@@ -16,7 +21,7 @@ import java.util.ArrayDeque;
  * output has room (falling back to the other if one's blocked, stalling if
  * both are).
  */
-public class Splitter extends Building {
+public class Splitter extends Building implements ItemAcceptor {
 
     public static final int COST = Balance.SPLITTER_COST;
 
@@ -115,27 +120,19 @@ public class Splitter extends Building {
     }
 
     /**
-     * Accepts an item from a conveyor only if the item is entering from
-     * the back face (opposite to facing direction) relative to the target tile.
+     * Accepts an item only if it enters through the back face: one step from
+     * the sender in the facing direction must land on this splitter.
      */
-    public boolean acceptItem(Item item, int fromX, int fromY, int toX, int toY) {
-        // Compute where an item would have to come from to enter through the back of toX, toY
-        int expectedFromX = toX;
-        int expectedFromY = toY;
+    @Override
+    public boolean acceptItem(Item item, int fromX, int fromY) {
+        int toX = fromX + dx(facing);
+        int toY = fromY + dy(facing);
 
-        switch (facing) {
-            case UP -> expectedFromY--;
-            case DOWN -> expectedFromY++;
-            case LEFT -> expectedFromX++;
-            case RIGHT -> expectedFromX--;
-        }
+        boolean entersFromBack = toX >= x && toX < x + width && toY >= y && toY < y + height;
+        if (!entersFromBack) return false;
 
-        // Verify that the delivery is coming directly from the back position
-        if (fromX != expectedFromX || fromY != expectedFromY) {
-            return false;
-        }
+        if (buffer.size() >= Balance.SPLITTER_MAX_BUFFER) return false;
 
-        // Buffer limits check (optional max buffer size safeguard, if needed)
         buffer.add(item);
         return true;
     }
@@ -158,27 +155,41 @@ public class Splitter extends Building {
     }
 
     private boolean tryOutput(Item item, int tx, int ty) {
-        Building b = world.getAt(tx, ty);
-
-        if (b instanceof Conveyor c && c.canAcceptAnotherItem()) {
-            c.addIncomingItem(item);
-            return true;
-        }
-        if (b instanceof Core core) {
-            return core.acceptItem(item);
-        }
-        if (b instanceof Smelter smelter) {
-            return smelter.acceptItem(item);
-        }
-        if (b instanceof Splitter splitter) {
-            return splitter.acceptItem(item, tx, ty, outputAX, outputAY);
-        }
-
-        return false;
+        return pushItem(item, tx, ty);
     }
 
     @Override
     public Building copyAt(int x, int y) {
         return new Splitter(x, y, facing);
+    }
+
+    @Override
+    public BuildingType type() {
+        return BuildingType.SPLITTER;
+    }
+
+    @Override
+    public Conveyor.Direction facing() {
+        return facing;
+    }
+
+    @Override
+    public void writeState(DataOutputStream out) throws IOException {
+        out.writeInt(buffer.size());
+        for (Item item : buffer) {
+            SaveIO.writeItemType(out, item.type());
+        }
+        out.writeBoolean(preferB);
+    }
+
+    @Override
+    public void readState(DataInputStream in) throws IOException {
+        buffer.clear();
+        int n = in.readInt();
+        for (int i = 0; i < n; i++) {
+            ItemType type = SaveIO.readItemType(in);
+            if (type != null) buffer.add(new Item(type));
+        }
+        preferB = in.readBoolean();
     }
 }

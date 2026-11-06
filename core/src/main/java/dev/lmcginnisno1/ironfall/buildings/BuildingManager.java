@@ -91,6 +91,15 @@ public class BuildingManager {
         return true;
     }
 
+    /** Removes every building (including the Core) and resets upgrades. Used when loading or starting a new world. */
+    public void clear() {
+        buildings.clear();
+        grid.clear();
+        upgrades.minerSpeedLevel = 0;
+        upgrades.beltSpeedLevel = 0;
+        upgrades.storageCapacityLevel = 0;
+    }
+
     public void update(float delta) {
         for (Building b : buildings) b.update(delta);
     }

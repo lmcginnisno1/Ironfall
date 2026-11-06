@@ -2,6 +2,11 @@ package dev.lmcginnisno1.ironfall.buildings;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import dev.lmcginnisno1.ironfall.items.Item;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 public abstract class Building {
 
@@ -43,4 +48,35 @@ public abstract class Building {
     }
 
     public abstract Building copyAt(int x, int y);
+
+    // --- Item transfer ---
+
+    /**
+     * Tries to hand an item to whatever building occupies tile (tx, ty).
+     * The sender tile passed on is the tile of this building closest to
+     * (tx, ty), which is the touching tile when (tx, ty) is a direct neighbour.
+     */
+    protected boolean pushItem(Item item, int tx, int ty) {
+        Building target = world.getAt(tx, ty);
+        if (target == null || target == this || !(target instanceof ItemAcceptor acceptor)) return false;
+
+        int fromX = Math.max(x, Math.min(tx, x + width - 1));
+        int fromY = Math.max(y, Math.min(ty, y + height - 1));
+        return acceptor.acceptItem(item, fromX, fromY);
+    }
+
+    // --- Saving ---
+
+    public abstract BuildingType type();
+
+    /** Direction this building faces, or null if it doesn't rotate. Saved alongside the position. */
+    public Conveyor.Direction facing() {
+        return null;
+    }
+
+    /** Writes runtime state (buffers, timers, items in transit). Position and facing are saved separately. */
+    public void writeState(DataOutputStream out) throws IOException {}
+
+    /** Reads back exactly what {@link #writeState} wrote. */
+    public void readState(DataInputStream in) throws IOException {}
 }
