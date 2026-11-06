@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
 import dev.lmcginnisno1.ironfall.buildings.Building;
 import dev.lmcginnisno1.ironfall.buildings.Conveyor;
-import dev.lmcginnisno1.ironfall.buildings.ElectricMiner;
+import dev.lmcginnisno1.ironfall.power.PowerBlock;
 import dev.lmcginnisno1.ironfall.power.PowerSystem;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
 import dev.lmcginnisno1.ironfall.IronfallGame;
@@ -53,7 +53,7 @@ public class WorldRenderer {
     /** A small marker on powered buildings that aren't getting enough power: red = none, orange = some. */
     private void renderPowerWarnings(SpriteBatch batch) {
         for (Building b : buildings.getBuildings()) {
-            if (!(b instanceof ElectricMiner miner) || !miner.isPowerStarved()) continue;
+            if (!(b instanceof PowerBlock block) || !block.isPowerStarved()) continue;
 
             float size = 7f;
             float x = (b.x + b.width) * TileEngine.TILE_SIZE - size - 3;
@@ -61,7 +61,7 @@ public class WorldRenderer {
 
             batch.setColor(0.1f, 0.1f, 0.1f, 1f);
             batch.draw(Assets.whitePixel, x - 1, y - 1, size + 2, size + 2);
-            if (miner.satisfaction() <= 0f) batch.setColor(0.9f, 0.2f, 0.2f, 1f);
+            if (block.powerReceived() <= 0f) batch.setColor(0.9f, 0.2f, 0.2f, 1f);
             else batch.setColor(1f, 0.6f, 0.1f, 1f);
             batch.draw(Assets.whitePixel, x, y, size, size);
         }

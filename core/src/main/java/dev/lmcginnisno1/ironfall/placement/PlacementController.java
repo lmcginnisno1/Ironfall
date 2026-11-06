@@ -119,8 +119,8 @@ public class PlacementController {
             return;
         }
 
-        // Conveyor placement is special
-        if (prototype instanceof Conveyor) {
+        // Conveyors and conduits are drag-placed along a path
+        if (isPathBuilding()) {
             updateConveyorPlacement(leftJustPressed, leftJustReleased);
             return;
         }
@@ -143,6 +143,7 @@ public class PlacementController {
         if (prototype.requiresOre()) {
             valid &= oreCheck(px, py, prototype.width, prototype.height);
         }
+        valid &= terrainOk(prototype, px, py, prototype.width, prototype.height);
 
         if (leftJustPressed && valid) {
             game.credits -= prototype.cost;
@@ -158,8 +159,8 @@ public class PlacementController {
     private void renderGenericGhost(SpriteBatch batch) {
         if (prototype == null) return;
 
-        // Conveyor ghost handled separately
-        if (prototype instanceof Conveyor) {
+        // Conveyor/conduit ghost handled separately
+        if (isPathBuilding()) {
             renderConveyorGhost(batch);
             return;
         }
@@ -180,6 +181,7 @@ public class PlacementController {
         if (prototype.requiresOre()) {
             valid &= oreCheck(px, py, prototype.width, prototype.height);
         }
+        valid &= terrainOk(prototype, px, py, prototype.width, prototype.height);
 
         if (prototype instanceof PowerNode) {
             renderNodeRangePreview(batch, px, py);
@@ -246,23 +248,29 @@ public class PlacementController {
             draggingConveyor = false;
 
             if (cachedPath != null && !cachedPath.isEmpty()) {
-                int totalCost = cachedPath.size() * Conveyor.COST;
+                // Tiles that are occupied or on water are skipped, and only placed tiles are paid for.
+                int placeable = 0;
+                for (Vector2 p : cachedPath) {
+                    if (pathTileOk((int) p.x, (int) p.y)) placeable++;
+                }
+                int totalCost = placeable * prototype.cost;
 
-                if (game.credits >= totalCost) {
+                if (placeable > 0 && game.credits >= totalCost) {
                     game.credits -= totalCost;
 
                     for (int i = 0; i < cachedPath.size(); i++) {
                         Vector2 p = cachedPath.get(i);
-                        Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
-                        buildings.place(new Conveyor((int)p.x, (int)p.y, dir));
+                        if (!pathTileOk((int) p.x, (int) p.y)) continue;
+                        Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i, prototype.getClass());
+                        buildings.place(pathPiece((int) p.x, (int) p.y, dir));
                     }
                 }
             } else {
-                // Single-click conveyor placement using current manual rotation
+                // Single-click placement using current manual rotation
                 Conveyor.Direction dir = ROTATION_ORDER[currentRotation];
-                if (buildings.canPlace(tx, ty, 1, 1) && game.credits >= Conveyor.COST) {
-                    game.credits -= Conveyor.COST;
-                    buildings.place(new Conveyor(tx, ty, dir));
+                if (pathTileOk(tx, ty) && game.credits >= prototype.cost) {
+                    game.credits -= prototype.cost;
+                    buildings.place(pathPiece(tx, ty, dir));
                 }
             }
 
@@ -286,25 +294,30 @@ public class PlacementController {
             int tx = game.tileX;
             int ty = game.tileY;
 
-            boolean valid = buildings.canPlace(tx, ty, 1, 1) && game.credits >= Conveyor.COST;
+            boolean valid = pathTileOk(tx, ty) && game.credits >= prototype.cost;
             batch.setColor(valid ? 1f : 1f, valid ? 1f : 0.3f, valid ? 1f : 0.3f, 0.5f);
 
             Conveyor.Direction dir = ROTATION_ORDER[currentRotation];
-            batch.draw(getConveyorSprite(dir), tx * 16, ty * 16, 16, 16);
+            batch.draw(pathSprite(dir), tx * 16, ty * 16, 16, 16);
             batch.setColor(1f, 1f, 1f, 1f);
             return;
         }
 
         if (cachedPath == null) return;
 
-        boolean canAfford = game.credits >= cachedPath.size() * Conveyor.COST;
+        int placeable = 0;
+        for (Vector2 p : cachedPath) {
+            if (pathTileOk((int) p.x, (int) p.y)) placeable++;
+        }
+        boolean canAfford = game.credits >= placeable * prototype.cost;
 
         for (int i = 0; i < cachedPath.size(); i++) {
             Vector2 p = cachedPath.get(i);
-            Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i);
+            Conveyor.Direction dir = conveyorHelper.getDirectionForIndex(cachedPath, i, prototype.getClass());
+            boolean ok = canAfford && pathTileOk((int) p.x, (int) p.y);
 
-            batch.setColor(canAfford ? 1f : 1f, canAfford ? 1f : 0.3f, canAfford ? 1f : 0.3f, 0.5f);
-            batch.draw(getConveyorSprite(dir), p.x * 16, p.y * 16, 16, 16);
+            batch.setColor(1f, ok ? 1f : 0.3f, ok ? 1f : 0.3f, 0.5f);
+            batch.draw(pathSprite(dir), p.x * 16, p.y * 16, 16, 16);
         }
 
         batch.setColor(1f, 1f, 1f, 1f);
@@ -322,7 +335,8 @@ public class PlacementController {
         int w = Splitter.widthFor(facing);
         int h = Splitter.heightFor(facing);
 
-        boolean valid = buildings.canPlace(ox, oy, w, h) && game.credits >= Splitter.COST;
+        boolean valid = buildings.canPlace(ox, oy, w, h) && game.credits >= Splitter.COST
+            && terrainOk(prototype, ox, oy, w, h);
 
         if (leftJustPressed && valid) {
             game.credits -= Splitter.COST;
@@ -344,7 +358,8 @@ public class PlacementController {
         int w = Splitter.widthFor(facing);
         int h = Splitter.heightFor(facing);
 
-        boolean valid = buildings.canPlace(ox, oy, w, h) && game.credits >= Splitter.COST;
+        boolean valid = buildings.canPlace(ox, oy, w, h) && game.credits >= Splitter.COST
+            && terrainOk(prototype, ox, oy, w, h);
 
         batch.setColor(valid ? 1f : 1f, valid ? 1f : 0.3f, valid ? 1f : 0.3f, 0.6f);
         batch.draw(getSplitterSprite(facing), ox * 16, oy * 16, w * 16, h * 16);
@@ -367,6 +382,34 @@ public class PlacementController {
             case LEFT -> Assets.conveyorLeft;
             case RIGHT -> Assets.conveyorRight;
         };
+    }
+
+    /** Conveyors and conduits: placed by dragging a path, one tile per piece. */
+    private boolean isPathBuilding() {
+        return prototype instanceof Conveyor || prototype instanceof Conduit;
+    }
+
+    private Building pathPiece(int x, int y, Conveyor.Direction dir) {
+        return prototype instanceof Conduit ? new Conduit(x, y, dir) : new Conveyor(x, y, dir);
+    }
+
+    private TextureRegion pathSprite(Conveyor.Direction dir) {
+        return prototype instanceof Conduit ? Conduit.spriteFor(dir) : getConveyorSprite(dir);
+    }
+
+    private boolean pathTileOk(int x, int y) {
+        return buildings.canPlace(x, y, 1, 1) && terrainOk(prototype, x, y, 1, 1);
+    }
+
+    /** Water blocks building, except for buildings that need it (pumps), which must cover at least one water tile. */
+    private boolean terrainOk(Building proto, int x, int y, int w, int h) {
+        int water = 0;
+        for (int dy = 0; dy < h; dy++) {
+            for (int dx = 0; dx < w; dx++) {
+                if (game.engine.getTile(x + dx, y + dy) == TileType.WATER.id) water++;
+            }
+        }
+        return proto.requiresWater() ? water > 0 : water == 0;
     }
 
     private boolean oreCheck(int x, int y, int w, int h) {

@@ -7,6 +7,7 @@ Ironfall is a 2D factory automation and economic strategy game built using the l
 - **Resource Extraction:** Automated mining structures harvest raw ores from the game world.
 - **Logistics Networks:** Conveyor belts route physical items across the map grid.
 - **Power Grids:** Combustion generators burn coal to power tier-two buildings like the Electric Miner. Power nodes link everything within 6 tiles, and touching power buildings connect automatically. Batteries store surplus power and release it when generators fall behind or run out of coal.
+- **Water & Cooling:** Lakes appear across new worlds. Powered Water Pumps draw from them, Conduits carry water like conveyors carry items, and Water Tanks store it. Electric Miners and Smelters fed water run up to 50% faster.
 - **Centralized Core Storage:** A unified inventory system that collects and manages transported materials.
 - **Market Interface:** Multi-functional slider configurations and quick-liquidation controls that translate physical inventory into game currency.
 - **Persistent Currency Systems:** Real-time HUD tracking for credit tracking and resource values.

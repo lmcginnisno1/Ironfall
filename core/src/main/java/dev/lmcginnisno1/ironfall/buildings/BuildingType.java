@@ -15,7 +15,10 @@ public enum BuildingType {
     COMBUSTION_GENERATOR("combustion_generator", (x, y, facing, engine) -> new CombustionGenerator(x, y)),
     POWER_NODE("power_node", (x, y, facing, engine) -> new PowerNode(x, y)),
     BATTERY("battery", (x, y, facing, engine) -> new Battery(x, y)),
-    ELECTRIC_MINER("electric_miner", (x, y, facing, engine) -> new ElectricMiner(x, y, engine));
+    ELECTRIC_MINER("electric_miner", (x, y, facing, engine) -> new ElectricMiner(x, y, engine)),
+    WATER_PUMP("water_pump", (x, y, facing, engine) -> new WaterPump(x, y, engine)),
+    CONDUIT("conduit", (x, y, facing, engine) -> new Conduit(x, y, facing)),
+    WATER_TANK("water_tank", (x, y, facing, engine) -> new WaterTank(x, y));
 
     @FunctionalInterface
     public interface Factory {

@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 
+import dev.lmcginnisno1.ironfall.buildings.Conveyor;
+
 public class Assets {
     public static TextureRegion conveyorUp;
     public static TextureRegion conveyorDown;
@@ -24,6 +26,16 @@ public class Assets {
     public static TextureRegion powerNode;
     public static TextureRegion battery;
     public static TextureRegion electricMiner;
+    public static TextureRegion waterPump;
+    public static TextureRegion waterTank;
+    public static TextureRegion conduitUp;
+    public static TextureRegion conduitDown;
+    public static TextureRegion conduitLeft;
+    public static TextureRegion conduitRight;
+
+    // 90-degree corner pieces, indexed [incoming travel direction][outgoing direction] by ordinal.
+    private static final TextureRegion[][] conveyorCorners = new TextureRegion[4][4];
+    private static final TextureRegion[][] conduitCorners = new TextureRegion[4][4];
     public static TextureRegion whitePixel;
 
     // Every texture we create, so dispose() can't miss one.
@@ -55,6 +67,23 @@ public class Assets {
         powerNode = sprite("buildings/power_node.png");
         battery = sprite("buildings/battery.png");
         electricMiner = sprite("buildings/electric_miner.png");
+        waterPump = sprite("buildings/water_pump.png");
+        waterTank = sprite("buildings/water_tank.png");
+        conduitUp = sprite("buildings/conduit/conduit_up.png");
+        conduitDown = sprite("buildings/conduit/conduit_down.png");
+        conduitLeft = sprite("buildings/conduit/conduit_left.png");
+        conduitRight = sprite("buildings/conduit/conduit_right.png");
+
+        for (Conveyor.Direction in : Conveyor.Direction.values()) {
+            for (Conveyor.Direction out : Conveyor.Direction.values()) {
+                boolean inHorizontal = in == Conveyor.Direction.LEFT || in == Conveyor.Direction.RIGHT;
+                boolean outHorizontal = out == Conveyor.Direction.LEFT || out == Conveyor.Direction.RIGHT;
+                if (inHorizontal == outHorizontal) continue; // only 90-degree turns
+                String name = in.name().toLowerCase() + "_" + out.name().toLowerCase() + ".png";
+                conveyorCorners[in.ordinal()][out.ordinal()] = sprite("buildings/conveyor/conveyor_corner_" + name);
+                conduitCorners[in.ordinal()][out.ordinal()] = sprite("buildings/conduit/conduit_corner_" + name);
+            }
+        }
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE);
@@ -63,6 +92,15 @@ public class Assets {
         textures.add(white);
         whitePixel = new TextureRegion(white);
         pm.dispose();
+    }
+
+    /** Corner piece for a belt entering travelling {@code in} and leaving {@code out}. */
+    public static TextureRegion conveyorCorner(Conveyor.Direction in, Conveyor.Direction out) {
+        return conveyorCorners[in.ordinal()][out.ordinal()];
+    }
+
+    public static TextureRegion conduitCorner(Conveyor.Direction in, Conveyor.Direction out) {
+        return conduitCorners[in.ordinal()][out.ordinal()];
     }
 
     public static void dispose() {

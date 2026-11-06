@@ -77,10 +77,42 @@ public abstract class Building {
         return false;
     }
 
+    // --- Water transfer ---
+
+    /** Offers water to the building at (tx, ty). Returns how much it took. */
+    protected float pushWater(float amount, int tx, int ty) {
+        if (amount <= 0f) return 0f;
+        Building target = world.getAt(tx, ty);
+        if (target == null || target == this || !(target instanceof WaterAcceptor acceptor)) return 0f;
+
+        int fromX = Math.max(x, Math.min(tx, x + width - 1));
+        int fromY = Math.max(y, Math.min(ty, y + height - 1));
+        return acceptor.acceptWater(amount, fromX, fromY);
+    }
+
+    /** Offers water around every edge until it's all taken. Returns the total taken. */
+    protected float pushWaterToNeighbours(float amount) {
+        float left = amount;
+        for (int tx = x; tx < x + width && left > 0f; tx++) {
+            left -= pushWater(left, tx, y - 1);
+            left -= pushWater(left, tx, y + height);
+        }
+        for (int ty = y; ty < y + height && left > 0f; ty++) {
+            left -= pushWater(left, x - 1, ty);
+            left -= pushWater(left, x + width, ty);
+        }
+        return amount - left;
+    }
+
     // --- Placement and UI ---
 
     /** True for buildings that must sit on at least one tile of a single ore type (miners). */
     public boolean requiresOre() {
+        return false;
+    }
+
+    /** True for buildings that must cover at least one water tile (pumps). Everything else can't touch water. */
+    public boolean requiresWater() {
         return false;
     }
 

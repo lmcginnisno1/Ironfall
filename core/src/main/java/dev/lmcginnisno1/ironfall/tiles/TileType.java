@@ -8,7 +8,8 @@ public enum TileType {
     STONE(2, 9, 10, "stone"),
     COAL(10, 10, 11, "coal"),
     IRON(10, 11, 12, "iron"),
-    COPPER(11, 11, 13, "copper");
+    COPPER(11, 11, 13, "copper"),
+    WATER(11, 1, 20, "water");
 
     public final int row;
     public final int col;

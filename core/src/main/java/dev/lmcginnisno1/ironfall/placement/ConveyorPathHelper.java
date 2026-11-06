@@ -32,11 +32,16 @@ public class ConveyorPathHelper {
         return path;
     }
 
-    public Conveyor.Direction getDirectionForIndex(ArrayList<Vector2> path, int i) {
+    /**
+     * Direction for the piece at index i. pieceType is the kind of building
+     * being laid (Conveyor or Conduit), so the last piece turns toward a real
+     * destination and not into the path's own earlier pieces.
+     */
+    public Conveyor.Direction getDirectionForIndex(ArrayList<Vector2> path, int i, Class<?> pieceType) {
         Vector2 current = path.get(i);
 
         if (i == path.size() - 1) {
-            Building b = getAdjacentBuilding((int) current.x, (int) current.y);
+            Building b = getAdjacentBuilding((int) current.x, (int) current.y, pieceType);
             if (b != null) {
                 if (current.x == b.x - 1) return Conveyor.Direction.RIGHT;
                 if (current.x == b.x + b.width) return Conveyor.Direction.LEFT;
@@ -58,14 +63,14 @@ public class ConveyorPathHelper {
         return Conveyor.Direction.DOWN;
     }
 
-    private Building getAdjacentBuilding(int tx, int ty) {
+    private Building getAdjacentBuilding(int tx, int ty, Class<?> pieceType) {
         for (Building b : buildings.getBuildings()) {
             // Only orient into genuine destinations (e.g. the Core). A belt's
             // own earlier segments are already placed by the time we reach
             // the last tile, so without this check a belt dropped short of
             // the Core would detect its own previous tile as a "target" and
             // point backward into itself instead of just continuing straight.
-            if (b instanceof Conveyor) continue;
+            if (pieceType.isInstance(b)) continue;
 
             if (tx == b.x - 1 && ty >= b.y && ty < b.y + b.height) return b;
             if (tx == b.x + b.width && ty >= b.y && ty < b.y + b.height) return b;

@@ -20,4 +20,14 @@ public interface PowerBlock {
 
     /** Called every frame, before buildings update, with the grid this block belongs to. */
     void setPowerGrid(PowerGrid grid);
+
+    /** Fraction of the power this block wants that it's getting (0..1). Consumers override this. */
+    default float powerReceived() {
+        return 1f;
+    }
+
+    /** True while this block wants power but isn't getting all of it; shows a warning marker on the map. */
+    default boolean isPowerStarved() {
+        return powerDemand() > 0f && powerReceived() < 1f;
+    }
 }

@@ -18,8 +18,9 @@ import java.util.List;
  * Tier-2 3x3 miner. Mines faster per ore tile than the Basic Miner but needs
  * power: it runs at the grid's satisfaction (half power = half speed) and
  * stops entirely without it. It only draws power while it has room to mine.
+ * Fed water (from a conduit, tank or pump), it mines up to 50% faster.
  */
-public class ElectricMiner extends Building implements PowerBlock {
+public class ElectricMiner extends Building implements PowerBlock, WaterAcceptor {
 
     public static final int COST = Balance.ELECTRIC_MINER_COST;
     public static final int SIZE = 3;
@@ -31,6 +32,7 @@ public class ElectricMiner extends Building implements PowerBlock {
     private float timer = 0f;
     private Item buffer = null;     // one finished item waiting for room
     private PowerGrid grid;
+    private final Coolant coolant = new Coolant();
 
     public ElectricMiner(int x, int y, TileEngine engine) {
         super(x, y, SIZE, SIZE, Assets.electricMiner, COST);
@@ -62,9 +64,9 @@ public class ElectricMiner extends Building implements PowerBlock {
         return grid == null ? 0f : grid.satisfaction();
     }
 
-    /** True while the miner wants to mine but isn't getting full power. */
-    public boolean isPowerStarved() {
-        return powerDemand() > 0f && satisfaction() < 1f;
+    @Override
+    public float powerReceived() {
+        return satisfaction();
     }
 
     @Override
@@ -77,13 +79,22 @@ public class ElectricMiner extends Building implements PowerBlock {
         }
 
         float rate = fullRate() * satisfaction();
-        if (rate <= 0f) return;
+        if (rate <= 0f) {
+            coolant.idle();
+            return;
+        }
+        rate *= coolant.use(delta);
 
         timer += delta;
         if (timer >= 1f / rate) {
             timer -= 1f / rate;
             buffer = new Item(ore);
         }
+    }
+
+    @Override
+    public float acceptWater(float amount, int fromX, int fromY) {
+        return coolant.accept(amount);
     }
 
     @Override
@@ -112,6 +123,7 @@ public class ElectricMiner extends Building implements PowerBlock {
             "Mining " + oreName + " (" + oreTiles + " ore tiles)",
             String.format("Rate: %.2f/s at full power", fullRate()),
             power,
+            coolant.infoLine(),
             PowerGrid.describe(grid)
         );
     }
@@ -130,6 +142,7 @@ public class ElectricMiner extends Building implements PowerBlock {
     public void writeState(DataOutputStream out) throws IOException {
         out.writeFloat(timer);
         SaveIO.writeItemType(out, buffer == null ? null : buffer.type());
+        out.writeFloat(coolant.water());
     }
 
     @Override
@@ -137,5 +150,7 @@ public class ElectricMiner extends Building implements PowerBlock {
         timer = in.readFloat();
         ItemType type = SaveIO.readItemType(in);
         buffer = type == null ? null : new Item(type);
+        // Coolant was added in 0.10.0; 0.9.x saves end before it.
+        if (in.available() >= 4) coolant.setWater(in.readFloat());
     }
 }

@@ -4,5 +4,6 @@ public enum BuildCategory {
     MINING,
     TRANSPORT,
     PROCESSING,
-    POWER
+    POWER,
+    WATER
 }

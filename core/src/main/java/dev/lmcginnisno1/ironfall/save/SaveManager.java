@@ -226,7 +226,7 @@ public class SaveManager {
             }
 
             Conveyor.Direction facing = (r.facing >= 0 && r.facing < dirs.length) ? dirs[r.facing] : null;
-            if (facing == null && (type == BuildingType.CONVEYOR || type == BuildingType.SPLITTER)) {
+            if (facing == null && (type == BuildingType.CONVEYOR || type == BuildingType.SPLITTER || type == BuildingType.CONDUIT)) {
                 Gdx.app.error("Save", "Skipping " + r.typeId + " at " + r.x + "," + r.y + " with no direction");
                 continue;
             }

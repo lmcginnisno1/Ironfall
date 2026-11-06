@@ -67,7 +67,7 @@ public class OverlayRenderer {
                 new BuildEntry("Electric Miner", Assets.electricMiner, ElectricMiner.COST, () -> new ElectricMiner(0,0, game.engine))
             ),
             BuildCategory.TRANSPORT, List.of(
-                new BuildEntry("Conveyor", Assets.conveyorUp, Conveyor.COST, () -> new Conveyor(0,0, Conveyor.Direction.UP)),
+                new BuildEntry("Conveyor", Assets.conveyorUp, Conveyor.COST, () -> new Conveyor(0,0, Conveyor.Direction.UP), true),
                 new BuildEntry("Splitter", Assets.splitterUp, Splitter.COST, () -> new Splitter(0,0, Conveyor.Direction.UP))
             ),
             BuildCategory.PROCESSING, List.of(
@@ -77,6 +77,11 @@ public class OverlayRenderer {
                 new BuildEntry("Generator", Assets.combustionGenerator, CombustionGenerator.COST, () -> new CombustionGenerator(0,0)),
                 new BuildEntry("Power Node", Assets.powerNode, PowerNode.COST, () -> new PowerNode(0,0)),
                 new BuildEntry("Battery", Assets.battery, Battery.COST, () -> new Battery(0,0))
+            ),
+            BuildCategory.WATER, List.of(
+                new BuildEntry("Water Pump", Assets.waterPump, WaterPump.COST, () -> new WaterPump(0,0, game.engine)),
+                new BuildEntry("Conduit", Assets.conduitUp, Conduit.COST, () -> new Conduit(0,0, Conveyor.Direction.UP), true),
+                new BuildEntry("Water Tank", Assets.waterTank, WaterTank.COST, () -> new WaterTank(0,0))
             )
         );
     }
@@ -373,10 +378,9 @@ public class OverlayRenderer {
     private void drawCategoryContents(SpriteBatch batch, BuildCategory cat, int x, int startY) {
         int y = startY;
 
-        String costSuffix = (cat == BuildCategory.TRANSPORT) ? "/tile" : "";
-
         for (BuildEntry entry : entries.get(cat)) {
             batch.draw(entry.icon, x, y - 32, 32, 32);
+            String costSuffix = entry.perTile ? "/tile" : "";
             font.draw(batch, entry.name + " ($" + entry.cost + costSuffix + ")", x + 40, y - 8);
             y -= 40;
         }

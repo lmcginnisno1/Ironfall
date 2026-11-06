@@ -89,6 +89,30 @@ public final class Balance {
     public static final float ELECTRIC_MINER_RATE_PER_ORE_TILE = 0.3f; // ore/sec per ore tile at full power
     public static final float ELECTRIC_MINER_POWER_USE = 30f;  // power/sec while mining
 
+    // --- Water (amounts in water units, rates per second) ---
+
+    // Water pump: 2x2, must cover at least one water tile, needs power.
+    // On 4 water tiles it pumps 16/s, enough to cool four buildings.
+    public static final int WATER_PUMP_COST = 60;               // credits
+    public static final float WATER_PUMP_RATE_PER_WATER_TILE = 4f;
+    public static final float WATER_PUMP_POWER_USE = 15f;       // power/sec while pumping
+    public static final float WATER_PUMP_BUFFER = 20f;          // water held before it stops pumping
+
+    // Conduit: water's conveyor belt. Placed by dragging, like conveyors.
+    public static final int CONDUIT_COST_PER_TILE = 3;          // credits
+    public static final float CONDUIT_CAPACITY = 10f;
+    public static final float CONDUIT_FLOW_RATE = 40f;          // max water/sec through one conduit
+
+    // Water tank: 2x2 storage that feeds every neighbour.
+    public static final int WATER_TANK_COST = 80;               // credits
+    public static final float WATER_TANK_CAPACITY = 1000f;
+    public static final float WATER_TANK_OUTPUT_RATE = 40f;     // max water/sec out
+
+    // Cooling: Electric Miners and Smelters fed water work faster.
+    public static final float COOLANT_BUFFER = 10f;             // water a building holds
+    public static final float COOLANT_USE = 4f;                 // water/sec while working
+    public static final float COOLANT_SPEED_BONUS = 0.5f;       // +50% speed when fully cooled
+
     // --- Upgrades: shared ---
 
     public static final int UPGRADE_MAX_LEVEL = 5;

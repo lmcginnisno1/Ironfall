@@ -1,5 +1,6 @@
 package dev.lmcginnisno1.ironfall.buildings;
 
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 import dev.lmcginnisno1.ironfall.tiles.Assets;
@@ -122,6 +123,14 @@ public class Conveyor extends Building implements ItemAcceptor {
 
         // Blocked → wait at edge
         m.progress = 0.99f;
+    }
+
+    @Override
+    public void render(SpriteBatch batch) {
+        // Bends draw as a smooth corner piece instead of a straight belt.
+        Direction in = PathShape.cornerInput(this, direction);
+        TextureRegion region = in == null ? sprite : Assets.conveyorCorner(in, direction);
+        batch.draw(region, x * 16, y * 16, 16, 16);
     }
 
     // Used by renderer

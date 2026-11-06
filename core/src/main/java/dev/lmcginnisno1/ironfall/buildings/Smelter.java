@@ -9,8 +9,9 @@ import dev.lmcginnisno1.ironfall.tiles.Assets;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 
-public class Smelter extends Building implements ItemAcceptor {
+public class Smelter extends Building implements ItemAcceptor, WaterAcceptor {
 
     public static final int COST = Balance.SMELTER_COST;
 
@@ -19,6 +20,7 @@ public class Smelter extends Building implements ItemAcceptor {
     private int copperBuffer = 0;
 
     private float progress = 0f;
+    private final Coolant coolant = new Coolant(); // water makes crafting up to 50% faster
     private ItemType currentTargetOutput = null;
 
     // Alternation state: when both Iron and Copper are simultaneously
@@ -71,8 +73,13 @@ public class Smelter extends Building implements ItemAcceptor {
             }
         }
 
+        if (currentTargetOutput != null && progress < Balance.SMELTER_CRAFT_TIME) {
+            progress += delta * coolant.use(delta);
+        } else {
+            coolant.idle();
+        }
+
         if (currentTargetOutput != null) {
-            progress += delta;
             if (progress >= Balance.SMELTER_CRAFT_TIME) {
                 if (tryOutputIngot(currentTargetOutput)) {
                     // Consume ingredients on successful output
@@ -132,6 +139,26 @@ public class Smelter extends Building implements ItemAcceptor {
     }
 
     @Override
+    public float acceptWater(float amount, int fromX, int fromY) {
+        return coolant.accept(amount);
+    }
+
+    @Override
+    public List<String> infoLines() {
+        String crafting = currentTargetOutput == null
+            ? "Waiting for coal and ore"
+            : "Smelting " + currentTargetOutput.name.replace('_', ' ') + ": "
+                + Math.round(Math.min(1f, progress / Balance.SMELTER_CRAFT_TIME) * 100f) + "%";
+        return List.of(
+            "SMELTER",
+            crafting,
+            "Coal " + coalBuffer + "  Iron " + ironBuffer + "  Copper " + copperBuffer
+                + "  (max " + Balance.SMELTER_MAX_BUFFER + " each)",
+            coolant.infoLine()
+        );
+    }
+
+    @Override
     public void writeState(DataOutputStream out) throws IOException {
         out.writeInt(coalBuffer);
         out.writeInt(ironBuffer);
@@ -139,6 +166,7 @@ public class Smelter extends Building implements ItemAcceptor {
         out.writeFloat(progress);
         SaveIO.writeItemType(out, currentTargetOutput);
         out.writeBoolean(preferCopperNext);
+        out.writeFloat(coolant.water());
     }
 
     @Override
@@ -149,5 +177,7 @@ public class Smelter extends Building implements ItemAcceptor {
         progress = in.readFloat();
         currentTargetOutput = SaveIO.readItemType(in);
         preferCopperNext = in.readBoolean();
+        // Coolant was added in 0.10.0; older saves end before it.
+        if (in.available() >= 4) coolant.setWater(in.readFloat());
     }
 }

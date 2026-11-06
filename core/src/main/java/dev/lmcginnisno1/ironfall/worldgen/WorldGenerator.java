@@ -19,6 +19,8 @@ public class WorldGenerator {
         int height = engine.getHeight();
 
         generateTerrain(engine, rng, width, height);
+        // Lakes go down before ore veins, which only replace dirt/sand, so ore never floods.
+        generateLakes(engine, rng, width, height);
         generateVeins(engine, rng, width, height);
 
         Vector2 corePos = findCoreLocation(engine);
@@ -30,6 +32,28 @@ public class WorldGenerator {
             for (int x = 0; x < width; x++) {
                 double noise = rng.nextDouble();
                 engine.setTile(x, y, noise < 0.85 ? TileType.DIRT.id : TileType.SAND.id);
+            }
+        }
+    }
+
+    /** Scattered round-ish pools of water with ragged edges. */
+    private static void generateLakes(TileEngine engine, Random rng, int width, int height) {
+        int lakes = 18;
+        for (int i = 0; i < lakes; i++) {
+            int cx = rng.nextInt(width);
+            int cy = rng.nextInt(height);
+            float radius = 3f + rng.nextFloat() * 6f;   // 3..9 tiles
+            float stretch = 0.7f + rng.nextFloat() * 0.6f; // squash so lakes aren't perfect circles
+
+            int r = (int) Math.ceil(radius * 1.5f);
+            for (int y = cy - r; y <= cy + r; y++) {
+                for (int x = cx - r; x <= cx + r; x++) {
+                    if (!engine.inBounds(x, y)) continue;
+                    float dx = (x - cx) * stretch;
+                    float dy = (y - cy) / stretch;
+                    float edge = radius + (rng.nextFloat() - 0.5f) * 1.6f; // ragged shoreline
+                    if (dx * dx + dy * dy <= edge * edge) engine.setTile(x, y, TileType.WATER.id);
+                }
             }
         }
     }
@@ -76,7 +100,12 @@ public class WorldGenerator {
         for (int x = width / 4; x < width * 3 / 4; x++) {
             for (int y = height / 4; y < height * 3 / 4; y++) {
 
+                // The Core can't sit on water.
+                if (hasWater(engine, x, y, 4, 4)) continue;
+
                 float score = 0;
+                // A little water nearby makes a good start, but it's worth less than ore.
+                score += Math.min(oreScore(engine, x, y, TileType.WATER.id, 25), 40f);
                 score += oreScore(engine, x, y, TileType.COPPER.id, 20);
                 score += oreScore(engine, x, y, TileType.IRON.id, 30);
                 score += oreScore(engine, x, y, TileType.COAL.id, 30);
@@ -90,6 +119,15 @@ public class WorldGenerator {
         }
 
         return new Vector2(bestX, bestY);
+    }
+
+    private static boolean hasWater(TileEngine engine, int x, int y, int w, int h) {
+        for (int ty = y; ty < y + h; ty++) {
+            for (int tx = x; tx < x + w; tx++) {
+                if (engine.getTile(tx, ty) == TileType.WATER.id) return true;
+            }
+        }
+        return false;
     }
 
     private static float oreScore(TileEngine engine, int cx, int cy, int oreId, int radius) {
